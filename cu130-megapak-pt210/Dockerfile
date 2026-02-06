@@ -181,40 +181,27 @@ cpp15 \
     && update-alternatives --install /usr/bin/gcov-dump gcov-dump /usr/bin/gcov-dump-15 90 \
     && update-alternatives --install /usr/bin/gcov-tool gcov-tool /usr/bin/gcov-tool-15 90 
 
-# ################################################################################
-# # PyTorch, xFormers
-# # Break down the steps, so we have more but smaller image layers.
+################################################################################
+# PyTorch for CUDA 13.0
+# Using PyTorch nightly/preview builds for CUDA 13.0 support
 
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     pip list \
-#     && pip install \
-#         --upgrade pip wheel setuptools packaging \
-#     && pip install \
-#         --dry-run xformers==0.0.32.post2 torch==2.8.0 torchvision torchaudio \
-#         --index-url https://download.pytorch.org/whl/cu128
+# Upgrade pip and core packages
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip wheel setuptools packaging
 
-# # Here's some hack. To reduce image size & single layer size, we:
-# # 1. Install PyTorch and all its dependencies.
-# # 2. Uninstall PyTorch only,
-# # 3. Delete redundant NVIDIA Python libs (they are already installed as OS packages, except NCCL and NVSHMEM).
-# # 4. Install PyTorch again in another layer.
-# # Note: xFormers is not always released with latest PyTorch, so using `pip install --no-deps` is not a good idea.
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     pip install \
-#         xformers==0.0.32.post2 torch==2.8.0 torchvision torchaudio \
-#         --index-url https://download.pytorch.org/whl/cu128 \
-# && pip uninstall --yes torch \
-# && find /usr/local/lib/python3.13/site-packages/nvidia/ -mindepth 1 -maxdepth 1 ! -name 'nccl' ! -name 'nvshmem' -exec rm -rfv {} +
+# Install PyTorch with CUDA 13.0 support
+# Note: Using nightly builds or cu130 index as stable releases may not support CUDA 13.0 yet
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install torch torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/cu130 || \
+    pip install --pre torch torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/nightly/cu130
 
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     pip install \
-#         xformers==0.0.32.post2 torch==2.8.0 torchvision torchaudio \
-#         --index-url https://download.pytorch.org/whl/cu128
-
-# ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
-# :/usr/local/lib64/python3.13/site-packages/torch/lib\
-# :/usr/local/lib/python3.13/site-packages/nvidia/nccl/lib\
-# :/usr/local/lib/python3.13/site-packages/nvidia/nvshmem/lib"
+# Set library paths for PyTorch
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
+:/usr/local/lib64/python3.13/site-packages/torch/lib\
+:/usr/local/lib/python3.13/site-packages/nvidia/nccl/lib\
+:/usr/local/lib/python3.13/site-packages/nvidia/nvshmem/lib"
 
 # ################################################################################
 # # More Python Packages
