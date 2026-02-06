@@ -256,36 +256,51 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
 #     && pip install \
 # https://github.com/YanWenKun/ComfyUI-Containerfiles/releases/download/sageattn2/spas_sage_attn-0.1.0-cp312-cp312-linux_x86_64.whl
 
-# ################################################################################
-# # Bundle ComfyUI in the image
+################################################################################
+# Install ComfyUI with specific versions
 
-# WORKDIR /default-comfyui-bundle
+WORKDIR /root
 
-# RUN bash /builder-scripts/preload-cache.sh
+# Clone ComfyUI v0.12.3
+RUN git clone https://github.com/Comfy-Org/ComfyUI.git \
+    && cd ComfyUI \
+    && git checkout v0.12.3
 
-# # Install deps (comfyui-frontend-package, etc) pair to the preloaded ComfyUI version
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     pip install \
-#         -r '/default-comfyui-bundle/ComfyUI/requirements.txt' \
-#         -r '/default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt' \
-#     && pip list
+# Install ComfyUI dependencies
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r /root/ComfyUI/requirements.txt
 
-# ################################################################################
+# Clone ComfyUI Manager 4.1b1
+RUN cd /root/ComfyUI/custom_nodes \
+    && git clone https://github.com/Comfy-Org/ComfyUI-Manager.git \
+    && cd ComfyUI-Manager \
+    && git checkout 4.1b1
 
-# # Clean cache to avoid GitHub Actions "No space left on device"
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     if [ "${USING_GITHUB_ACTIONS}" = "true" ]; then \
-#         rm -rf /root/.cache/pip/* ; \
-#     fi
+# Install ComfyUI Manager dependencies
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r /root/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt
 
-# RUN du -ah /root \
-#     && find /root -mindepth 1 -maxdepth 1 -exec rm -rfv {} +
+# Install ComfyUI Frontend 1.39.8
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install comfyui-frontend==1.39.8 \
+    && pip list
 
-# COPY runner-scripts/.  /runner-scripts/
+################################################################################
+# Finalize image
 
-# USER root
-# VOLUME /root
-# WORKDIR /root
-# EXPOSE 8188
-# ENV CLI_ARGS=""
-# CMD ["bash","/runner-scripts/entrypoint.sh"]
+# Clean cache to avoid GitHub Actions "No space left on device"
+RUN --mount=type=cache,target=/root/.cache/pip \
+    if [ "${USING_GITHUB_ACTIONS}" = "true" ]; then \
+        rm -rf /root/.cache/pip/* ; \
+    fi
+
+# Copy runtime scripts
+COPY runner-scripts/.  /runner-scripts/
+
+# Set up working directory and entrypoint
+USER root
+VOLUME /root
+WORKDIR /root/ComfyUI
+EXPOSE 8188
+ENV CLI_ARGS=""
+CMD ["bash","/runner-scripts/entrypoint.sh"]
