@@ -49,6 +49,7 @@ gcs https://github.com/chrisgoringe/cg-use-everywhere.git
 gcs https://github.com/jags111/efficiency-nodes-comfyui.git
 gcs https://github.com/kijai/ComfyUI-KJNodes.git
 gcs https://github.com/pythongosssss/ComfyUI-Custom-Scripts.git
+gcs https://github.com/rgthree/rgthree-comfy.git
 gcs https://github.com/shiimizu/ComfyUI_smZNodes.git
 gcs https://github.com/yolain/ComfyUI-Easy-Use.git
 
@@ -71,6 +72,7 @@ gcs https://github.com/FizzleDorf/ComfyUI_FizzNodes.git
 gcs https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved.git
 gcs https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git
 gcs https://github.com/melMass/comfy_mtb.git
+gcs https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler.git
 
 # More
 gcs https://github.com/pythongosssss/ComfyUI-WD14-Tagger.git
@@ -84,7 +86,6 @@ gcs https://github.com/cubiq/ComfyUI_InstantID.git
 gcs https://github.com/cubiq/ComfyUI_IPAdapter_plus.git
 gcs https://github.com/cubiq/PuLID_ComfyUI.git
 gcs https://github.com/Gourieff/ComfyUI-ReActor.git ComfyUI-ReActor.disabled
-gcs https://github.com/rgthree/rgthree-comfy.git rgthree-comfy.disabled
 
 
 echo "########################################"

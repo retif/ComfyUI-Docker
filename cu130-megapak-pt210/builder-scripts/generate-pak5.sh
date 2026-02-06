@@ -25,11 +25,13 @@ https://github.com/Fannovel16/comfyui_controlnet_aux/raw/refs/heads/main/require
 https://github.com/Gourieff/ComfyUI-ReActor/raw/refs/heads/main/requirements.txt
 https://github.com/huchenlei/ComfyUI-layerdiffuse/raw/refs/heads/main/requirements.txt
 https://github.com/kijai/ComfyUI-Florence2/raw/refs/heads/main/requirements.txt
+https://github.com/Ltamann/ComfyUI-TBG-SAM3/raw/refs/heads/main/requirements.txt
 # Video
 https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite/raw/refs/heads/main/requirements.txt
 https://github.com/Fannovel16/ComfyUI-Frame-Interpolation/raw/refs/heads/main/requirements-no-cupy.txt
 https://github.com/melMass/comfy_mtb/raw/refs/heads/main/requirements.txt
 https://github.com/FizzleDorf/ComfyUI_FizzNodes/raw/refs/heads/main/requirements.txt
+https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler/raw/refs/heads/main/requirements.txt
 # Pending Removal
 # cubiq is no longer developing ComfyUI custom nodes
 https://github.com/cubiq/ComfyUI_essentials/raw/refs/heads/main/requirements.txt

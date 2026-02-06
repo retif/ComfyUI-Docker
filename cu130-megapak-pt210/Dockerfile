@@ -156,11 +156,14 @@ RUN rm -vf /usr/lib64/python3.13/EXTERNALLY-MANAGED \
     # Ensure default Python version
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.13 100
 
-# # Temp fix for OpenCV on openSUSE
-# ENV LD_PRELOAD=/usr/lib64/libjpeg.so.8
+# Temp fix for OpenCV on openSUSE
+ENV LD_PRELOAD=/usr/lib64/libjpeg.so.8
+
+# Temp fix for SentencePiece on CMAKE 4+
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 
 ################################################################################
-# GCC 11 
+# GCC 15 
 # Acceptable version range [9, 14]
 
 RUN --mount=type=cache,target=/var/cache/zypp \
@@ -203,42 +206,49 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
 :/usr/local/lib/python3.13/site-packages/nvidia/nccl/lib\
 :/usr/local/lib/python3.13/site-packages/nvidia/nvshmem/lib"
 
-# ################################################################################
-# # More Python Packages
+################################################################################
+# More Python Packages
 
-# # Deps for ComfyUI & custom nodes
-# COPY builder-scripts/.  /builder-scripts/
+# Deps for ComfyUI & custom nodes
+COPY builder-scripts/.  /builder-scripts/
 
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     pip install \
-#         -r /builder-scripts/pak3.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install \
+        -r /builder-scripts/pak3.txt
 
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     pip install \
-#         -r /builder-scripts/pak5.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install \
+        -r /builder-scripts/pak5.txt
 
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     pip install \
-#         -r /builder-scripts/pak7.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install \
+        -r /builder-scripts/pak7.txt
 
-# # Prevent SAM-2 from installing CUDA packages
-# # SAM-2 is used by ComfyUI-Impact-Pack
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     cd /builder-scripts \
-#     && git clone https://github.com/facebookresearch/sam2.git \
-#     && cd sam2 \
-#     && SAM2_BUILD_CUDA=1 pip install \
-#         -e . --no-deps --no-build-isolation \
-#     && cd /
+# Prevent SAM-2 from installing CUDA packages
+# SAM-2 is used by ComfyUI-Impact-Pack
+RUN --mount=type=cache,target=/root/.cache/pip \
+    cd /builder-scripts \
+    && git clone https://github.com/facebookresearch/sam2.git \
+    && cd sam2 \
+    && SAM2_BUILD_CUDA=1 pip install \
+        -e . --no-deps --no-build-isolation \
+    && cd /
 
-# # Prevent SAM-3 from installing NumPy1
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     cd /builder-scripts \
-#     && git clone https://github.com/facebookresearch/sam3.git \
-#     && cd sam3 \
-#     && pip install \
-#         -e . --no-deps --no-build-isolation \
-#     && cd /
+# Prevent SAM-3 from installing NumPy1
+RUN --mount=type=cache,target=/root/.cache/pip \
+    cd /builder-scripts \
+    && git clone https://github.com/facebookresearch/sam3.git \
+    && cd sam3 \
+    && pip install \
+        -e . --no-deps --no-build-isolation \
+    && cd /
+
+# Performance optimization libraries
+# Note: CUDA 13.0 binaries may not be available yet, using cu128 where needed
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -U uv \
+    && echo "Note: Skipping binary wheels (not yet available for Python 3.13 + CUDA 13.0)" \
+    || true
 
 # RUN --mount=type=cache,target=/root/.cache/pip \
 #     # Update UV
@@ -257,32 +267,22 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
 # https://github.com/YanWenKun/ComfyUI-Containerfiles/releases/download/sageattn2/spas_sage_attn-0.1.0-cp312-cp312-linux_x86_64.whl
 
 ################################################################################
-# Install ComfyUI with specific versions
+# Bundle ComfyUI and ~47 custom nodes
 
 WORKDIR /default-comfyui-bundle
 
-# Clone ComfyUI v0.12.3
-RUN git clone https://github.com/Comfy-Org/ComfyUI.git \
-    && cd ComfyUI \
-    && git checkout v0.12.3
+# Run preload-cache.sh to install:
+# - ComfyUI (latest stable version with git tag)
+# - ComfyUI Manager
+# - ~47 popular custom nodes for performance, workspace, general use
+RUN bash /builder-scripts/preload-cache.sh
 
-# Install ComfyUI dependencies
+# Install ComfyUI dependencies and Manager dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r /default-comfyui-bundle/ComfyUI/requirements.txt
-
-# Clone ComfyUI Manager 4.1b1
-RUN cd /default-comfyui-bundle/ComfyUI/custom_nodes \
-    && git clone https://github.com/Comfy-Org/ComfyUI-Manager.git \
-    && cd ComfyUI-Manager \
-    && git checkout 4.1b1
-
-# Install ComfyUI Manager dependencies
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt \
+    pip install \
+        -r '/default-comfyui-bundle/ComfyUI/requirements.txt' \
+        -r '/default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt' \
     && pip list
-
-# Note: comfyui-frontend-package is already installed via ComfyUI requirements.txt
-# ComfyUI v0.12.3 uses comfyui-frontend-package==1.37.11
 
 ################################################################################
 # Finalize image
@@ -292,6 +292,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     if [ "${USING_GITHUB_ACTIONS}" = "true" ]; then \
         rm -rf /root/.cache/pip/* ; \
     fi
+
+# Clean /root to reduce image size
+RUN du -ah /root \
+    && rm -rfv /root/* \
+    && rm -rfv /root/.[^.]* /root/.??*
 
 # Copy runtime scripts
 COPY runner-scripts/.  /runner-scripts/
