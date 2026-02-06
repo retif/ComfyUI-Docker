@@ -1,1 +1,8 @@
-*
+# Ignore git metadata
+.git
+.gitignore
+
+# Allow necessary files for build
+!Dockerfile
+!runner-scripts/
+!builder-scripts/
