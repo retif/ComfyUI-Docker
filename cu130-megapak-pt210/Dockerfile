@@ -278,12 +278,11 @@ RUN cd /default-comfyui-bundle/ComfyUI/custom_nodes \
 
 # Install ComfyUI Manager dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt
-
-# Install ComfyUI Frontend 1.39.8
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install comfyui-frontend==1.39.8 \
+    pip install -r /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt \
     && pip list
+
+# Note: comfyui-frontend-package is already installed via ComfyUI requirements.txt
+# ComfyUI v0.12.3 uses comfyui-frontend-package==1.37.11
 
 ################################################################################
 # Finalize image
