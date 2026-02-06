@@ -259,7 +259,7 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
 ################################################################################
 # Install ComfyUI with specific versions
 
-WORKDIR /root
+WORKDIR /default-comfyui-bundle
 
 # Clone ComfyUI v0.12.3
 RUN git clone https://github.com/Comfy-Org/ComfyUI.git \
@@ -268,17 +268,17 @@ RUN git clone https://github.com/Comfy-Org/ComfyUI.git \
 
 # Install ComfyUI dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r /root/ComfyUI/requirements.txt
+    pip install -r /default-comfyui-bundle/ComfyUI/requirements.txt
 
 # Clone ComfyUI Manager 4.1b1
-RUN cd /root/ComfyUI/custom_nodes \
+RUN cd /default-comfyui-bundle/ComfyUI/custom_nodes \
     && git clone https://github.com/Comfy-Org/ComfyUI-Manager.git \
     && cd ComfyUI-Manager \
     && git checkout 4.1b1
 
 # Install ComfyUI Manager dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r /root/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt
+    pip install -r /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt
 
 # Install ComfyUI Frontend 1.39.8
 RUN --mount=type=cache,target=/root/.cache/pip \
@@ -300,7 +300,7 @@ COPY runner-scripts/.  /runner-scripts/
 # Set up working directory and entrypoint
 USER root
 VOLUME /root
-WORKDIR /root/ComfyUI
+WORKDIR /root
 EXPOSE 8188
 ENV CLI_ARGS=""
 CMD ["bash","/runner-scripts/entrypoint.sh"]
