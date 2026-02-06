@@ -166,20 +166,9 @@ RUN rm -vf /usr/lib64/python3.13/EXTERNALLY-MANAGED \
 RUN --mount=type=cache,target=/var/cache/zypp \
     zypper --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
-gcc11 \
-gcc11-c++ \
-cpp11 \
-    && update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-11 90 \
-    && update-alternatives --install /usr/bin/cc  cc  /usr/bin/gcc-11 90 \
-    && update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-11 90 \
-    && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 90 \
-    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 90 \
-    && update-alternatives --install /usr/bin/gcc-ar gcc-ar /usr/bin/gcc-ar-11 90 \
-    && update-alternatives --install /usr/bin/gcc-nm gcc-nm /usr/bin/gcc-nm-11 90 \
-    && update-alternatives --install /usr/bin/gcc-ranlib gcc-ranlib /usr/bin/gcc-ranlib-11 90 \
-    && update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-11 90 \
-    && update-alternatives --install /usr/bin/gcov-dump gcov-dump /usr/bin/gcov-dump-11 90 \
-    && update-alternatives --install /usr/bin/gcov-tool gcov-tool /usr/bin/gcov-tool-11 90 
+gcc \
+gcc-c++ \
+cpp 
 
 # ################################################################################
 # # PyTorch, xFormers
