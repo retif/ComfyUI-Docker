@@ -4,12 +4,11 @@ on:
   workflow_dispatch: # Can be manually triggered
   push:
     branches: [ main ]
-    paths-ignore:
-      - '**'
-      - '!cu130-megapak-pt210-py314-source/Dockerfile'
-      - '!cu130-megapak-pt210-py314-source/builder-scripts/**'
-      - '!cu130-megapak-pt210-py314-source/runner-scripts/**'
-      - '!.github/workflows/build-cu130-megapak-pt210-py314-source.yml'
+    paths:
+      - 'cu130-megapak-pt210-py314-source/Dockerfile'
+      - 'cu130-megapak-pt210-py314-source/builder-scripts/**'
+      - 'cu130-megapak-pt210-py314-source/runner-scripts/**'
+      - '.github/workflows/build-cu130-megapak-pt210-py314-source.yml'
 
 jobs:
 
