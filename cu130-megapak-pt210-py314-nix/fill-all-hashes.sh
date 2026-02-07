@@ -17,7 +17,7 @@ NC='\033[0m' # No Color
 # Check if a file has any empty hashes
 check_empty_hashes() {
     local file=$1
-    if grep -q 'sha256 = "";' "$file" 2>/dev/null; then
+    if grep -q 'hash = "";' "$file" 2>/dev/null; then
         return 0  # Has empty hashes
     else
         return 1  # No empty hashes
@@ -29,8 +29,8 @@ fill_pypi_hashes() {
     local file=$1
     echo -e "${YELLOW}Processing PyPI packages in $file...${NC}"
 
-    # Find packages with fetchPypi and empty sha256
-    grep -B10 'sha256 = "";' "$file" | grep -E 'pname = |version = ' | while read -r line; do
+    # Find packages with fetchPypi and empty hash
+    grep -B10 'hash = "";' "$file" | grep -E 'pname = |version = ' | while read -r line; do
         if [[ $line =~ pname\ =\ \"([^\"]+)\" ]]; then
             pname="${BASH_REMATCH[1]}"
         elif [[ $line =~ version\ =\ \"([^\"]+)\" ]]; then
@@ -39,13 +39,20 @@ fill_pypi_hashes() {
             if [ -n "$pname" ] && [ -n "$version" ]; then
                 echo -e "  Fetching hash for ${GREEN}${pname}${NC} ${version}..."
 
-                # Use nix-prefetch-url to get the hash
-                hash=$(nix-prefetch-url "https://files.pythonhosted.org/packages/source/${pname:0:1}/${pname}/${pname}-${version}.tar.gz" 2>/dev/null || echo "")
+                # Use nix-prefetch-url to get the base32 hash, then convert to SRI
+                base32_hash=$(nix-prefetch-url "https://files.pythonhosted.org/packages/source/${pname:0:1}/${pname}/${pname}-${version}.tar.gz" 2>/dev/null || echo "")
 
-                if [ -n "$hash" ]; then
-                    # Update the file (find the package block and replace empty sha256)
-                    sed -i "/pname = \"${pname}\"/,/sha256 = \"\";/{s|sha256 = \"\";|sha256 = \"${hash}\";|}" "$file"
-                    echo -e "    ${GREEN}✓${NC} Updated hash: ${hash}"
+                if [ -n "$base32_hash" ]; then
+                    # Convert base32 to SRI format
+                    sri_hash=$(nix hash to-sri --type sha256 "$base32_hash" 2>/dev/null || echo "")
+
+                    if [ -n "$sri_hash" ]; then
+                        # Update the file (find the package block and replace empty hash)
+                        sed -i "/pname = \"${pname}\"/,/hash = \"\";/{s|hash = \"\";|hash = \"${sri_hash}\";|}" "$file"
+                        echo -e "    ${GREEN}✓${NC} Updated hash: ${sri_hash}"
+                    else
+                        echo -e "    ${RED}✗${NC} Failed to convert hash to SRI format"
+                    fi
                 else
                     echo -e "    ${RED}✗${NC} Failed to fetch hash"
                 fi
@@ -62,8 +69,8 @@ fill_wheel_hashes() {
     local file=$1
     echo -e "${YELLOW}Processing wheel packages in $file...${NC}"
 
-    # Find packages with fetchurl (wheels) and empty sha256
-    grep -B5 'sha256 = "";' "$file" | grep 'url = ' | while read -r line; do
+    # Find packages with fetchurl (wheels) and empty hash
+    grep -B5 'hash = "";' "$file" | grep 'url = ' | while read -r line; do
         if [[ $line =~ url\ =\ \"([^\"]+)\" ]]; then
             url="${BASH_REMATCH[1]}"
 
@@ -72,14 +79,21 @@ fill_wheel_hashes() {
                 wheel_name="${BASH_REMATCH[1]}"
                 echo -e "  Fetching hash for ${GREEN}${wheel_name}.whl${NC}..."
 
-                # Use nix-prefetch-url to get the hash
-                hash=$(nix-prefetch-url "$url" 2>/dev/null || echo "")
+                # Use nix-prefetch-url to get the base32 hash, then convert to SRI
+                base32_hash=$(nix-prefetch-url "$url" 2>/dev/null || echo "")
 
-                if [ -n "$hash" ]; then
-                    # Update the file - replace the empty sha256 after this URL
-                    # Use perl for more precise replacement
-                    perl -i -pe "BEGIN{undef $/;} s|(url = \"${url//./\\.}\".*?)sha256 = \"\";|\1sha256 = \"${hash}\";|sm" "$file"
-                    echo -e "    ${GREEN}✓${NC} Updated hash: ${hash}"
+                if [ -n "$base32_hash" ]; then
+                    # Convert base32 to SRI format
+                    sri_hash=$(nix hash to-sri --type sha256 "$base32_hash" 2>/dev/null || echo "")
+
+                    if [ -n "$sri_hash" ]; then
+                        # Update the file - replace the empty hash after this URL
+                        # Use perl for more precise replacement
+                        perl -i -pe "BEGIN{undef $/;} s|(url = \"${url//./\\.}\".*?)hash = \"\";|\1hash = \"${sri_hash}\";|sm" "$file"
+                        echo -e "    ${GREEN}✓${NC} Updated hash: ${sri_hash}"
+                    else
+                        echo -e "    ${RED}✗${NC} Failed to convert hash to SRI format"
+                    fi
                 else
                     echo -e "    ${RED}✗${NC} Failed to fetch hash"
                 fi
@@ -93,7 +107,7 @@ fill_git_hashes() {
     local file=$1
     echo -e "${YELLOW}Processing git packages in $file...${NC}"
 
-    # Find packages with fetchFromGitHub and empty sha256
+    # Find packages with fetchFromGitHub and empty hash
     local in_fetch=false
     local owner=""
     local repo=""
@@ -112,17 +126,24 @@ fill_git_hashes() {
                 repo="${BASH_REMATCH[1]}"
             elif [[ $line =~ rev\ =\ \"([^\"]+)\" ]]; then
                 rev="${BASH_REMATCH[1]}"
-            elif [[ $line =~ sha256\ =\ \"\" ]]; then
+            elif [[ $line =~ hash\ =\ \"\" ]]; then
                 if [ -n "$owner" ] && [ -n "$repo" ] && [ -n "$rev" ]; then
                     echo -e "  Fetching hash for ${GREEN}${owner}/${repo}${NC} @ ${rev}..."
 
-                    # Use nix-prefetch-git
-                    hash=$(nix-prefetch-git --url "https://github.com/${owner}/${repo}" --rev "$rev" --quiet 2>/dev/null | jq -r '.sha256' || echo "")
+                    # Use nix-prefetch-git to get base32 hash, then convert to SRI
+                    base32_hash=$(nix-prefetch-git --url "https://github.com/${owner}/${repo}" --rev "$rev" --quiet 2>/dev/null | jq -r '.sha256' || echo "")
 
-                    if [ -n "$hash" ] && [ "$hash" != "null" ]; then
-                        # Update the file
-                        perl -i -pe "BEGIN{undef $/;} s|(owner = \"${owner}\".*?repo = \"${repo}\".*?rev = \"${rev}\".*?)sha256 = \"\";|\1sha256 = \"${hash}\";|sm" "$file"
-                        echo -e "    ${GREEN}✓${NC} Updated hash: ${hash}"
+                    if [ -n "$base32_hash" ] && [ "$base32_hash" != "null" ]; then
+                        # Convert base32 to SRI format
+                        sri_hash=$(nix hash to-sri --type sha256 "$base32_hash" 2>/dev/null || echo "")
+
+                        if [ -n "$sri_hash" ]; then
+                            # Update the file
+                            perl -i -pe "BEGIN{undef $/;} s|(owner = \"${owner}\".*?repo = \"${repo}\".*?rev = \"${rev}\".*?)hash = \"\";|\1hash = \"${sri_hash}\";|sm" "$file"
+                            echo -e "    ${GREEN}✓${NC} Updated hash: ${sri_hash}"
+                        else
+                            echo -e "    ${RED}✗${NC} Failed to convert hash to SRI format"
+                        fi
                     else
                         echo -e "    ${RED}✗${NC} Failed to fetch hash"
                     fi
@@ -170,8 +191,8 @@ if [ "$updated_any" = true ]; then
     echo "Verification:"
     for file in "${files[@]}"; do
         if [ -f "$file" ]; then
-            empty_count=$(grep -c 'sha256 = "";' "$file" 2>/dev/null || echo "0")
-            filled_count=$(grep -c 'sha256 = "' "$file" 2>/dev/null || echo "0")
+            empty_count=$(grep -c 'hash = "";' "$file" 2>/dev/null || echo "0")
+            filled_count=$(grep -c 'hash = "' "$file" 2>/dev/null || echo "0")
             if [ "$empty_count" -eq 0 ]; then
                 echo -e "  ${GREEN}✓${NC} $file: $filled_count hashes filled, 0 empty"
             else

@@ -30,7 +30,7 @@ rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "0312515jcqj103gw9qvilrzwzisisfsswcflpwi09qg1r083r8ri";
+      hash = "sha256-MaM8EMjh4QQiv9QxrrXTUcfPf6Zx48TfAEFiJksoIgw=";
     };
   };
 
@@ -41,7 +41,7 @@ rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "1c9704r1b1hry3pg33if1knx004a8m8338rvyj4yakwlzqakz7w1";
+      hash = "sha256-gZ8/Ff6UT+WJ9DujMVBFigDQ7QwujvHu8BmGFTIBJ7E=";
     };
     propagatedBuildInputs = with pythonPackages; [ ];
   };

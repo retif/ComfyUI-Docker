@@ -29,7 +29,7 @@ in rec {
     version = "2.10.0+cu130";
     src = fetchurl {
       url = "https://download.pytorch.org/whl/cu130/torch-2.10.0%2Bcu130-cp314-cp314-manylinux_2_28_x86_64.whl";
-      sha256 = "1wx21mdjbp25zn09ddnby8zfzm6vfb6n8vj9bamc38vx3dwn2nnv";
+      hash = "sha256-21pheRt9o8GqWkluZM1y29TvPvLLtpaA/UXcJVsNovM=";
       name = "torch-2.10.0-cu130-cp314-cp314-manylinux_2_28_x86_64.whl";
     };
   };
@@ -42,7 +42,7 @@ in rec {
     version = "2.10.0+cu130";
     src = fetchurl {
       url = "https://download.pytorch.org/whl/cu130/torchaudio-2.10.0%2Bcu130-cp314-cp314-manylinux_2_28_x86_64.whl";
-      sha256 = "0485n0dwhp0j9qya2gr07gg0f60kdd30dz32kv8i4s3fxvzq0ixw";
+      hash = "sha256-vEeA/+5uaBLRnmL8BkZrExgH3jsgP6E8ThJcyBuwBRE=";
       name = "torchaudio-2.10.0-cu130-cp314-cp314-manylinux_2_28_x86_64.whl";
     };
     propagatedBuildInputs = [ torch ];
@@ -57,7 +57,7 @@ in rec {
     version = "2.8.2";
     src = fetchurl {
       url = "https://github.com/retif/pytorch-wheels-builder/releases/download/flash-attn-v2.8.2-py314-torch2.10.0-cu130/flash_attn-2.8.2-cp314-cp314-linux_x86_64.whl";
-      sha256 = "1vj0imc1jhgm5s3ai4ri1dzwhrlp5qgp4rm19sxlxs77blvd3gn4";
+      hash = "sha256-xL7RNl3n6E67TqFmch8ul2bIfwsxk6iGLvVBGViNQO4=";
     };
     propagatedBuildInputs = [ torch ];
   };
@@ -67,7 +67,7 @@ in rec {
     version = "2.2.0+cu130torch2.10.0";
     src = fetchurl {
       url = "https://github.com/retif/pytorch-wheels-builder/releases/download/sageattention-v2.2.0-py314-torch2.10.0-cu130/sageattention-2.2.0%2Bcu130torch2.10.0-cp314-cp314-linux_x86_64.whl";
-      sha256 = "0phd9dlmf4z2f4gdvdvpks7yi2iwkkh1l96l25wrjvq5wpf0p08j";
+      hash = "sha256-EoEL3OUFb5l5EdQkGuCcPIroj553t90eceITV2lLDV4=";
       name = "sageattention-2.2.0-cu130torch2.10.0-cp314-cp314-linux_x86_64.whl";
     };
     propagatedBuildInputs = [ torch ];
@@ -78,7 +78,7 @@ in rec {
     version = "1.0.2+torch2.10";
     src = fetchurl {
       url = "https://github.com/retif/pytorch-wheels-builder/releases/download/nunchaku-v1.0.2-py314-torch2.10.0-cu130/nunchaku-1.0.2%2Btorch2.10-cp314-cp314-linux_x86_64.whl";
-      sha256 = "0k0n5zx4m31pcq1ka2b3a9xx1shkdn5mjlaps7a4why8za5d2xv4";
+      hash = "sha256-ZHfRivrIQ07U0VdRWYttE+rQe1JjCTUDZjeMSvovFkw=";
       name = "nunchaku-1.0.2-torch2.10-cp314-cp314-linux_x86_64.whl";
     };
     propagatedBuildInputs = [ torch ];
@@ -93,7 +93,7 @@ in rec {
     version = "14.0.0rc1";
     src = fetchurl {
       url = "https://github.com/cupy/cupy/releases/download/v14.0.0rc1/cupy_cuda13x-14.0.0rc1-cp314-cp314-manylinux2014_x86_64.whl";
-      sha256 = "083z0r6sfcx0k2406a3dk7n9nxk1g7ddrq3jh25nwvbk87s5dwxr";
+      hash = "sha256-ufNW9EFzbW6LgHLg3Np5YXab7JltKAOImKAzp00GfyA=";
     };
     propagatedBuildInputs = [ pythonPackages.numpy ];
   };

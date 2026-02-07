@@ -30,7 +30,7 @@ in rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "0y5804y68hh55fz78baaf8j2mbfgiihyzcz82v321f1p2n35hp94";
+      hash = "sha256-JF1YhhU3uCDGFuiz72GMz60qJHJKLXS+KwVCZDwBqHg=";
     };
     propagatedBuildInputs = with pythonPackages; [ numpy pillow opencv4 ];
   };
@@ -42,7 +42,7 @@ in rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "1xyxd3359wr3q1vddz76hq7wsi05a0a6i4s1iw0kgfrfc4czg4gi";
+      hash = "sha256-8ZH3GWEuuzcBj0GTaBRQBUTND4bm/NZ2wCPzVMZo3fc=";
     };
     propagatedBuildInputs = with pythonPackages; [ numpy opencv4 ];
   };
@@ -58,7 +58,7 @@ in rec {
       owner = "openai";
       repo = "CLIP";
       rev = "main";
-      sha256 = "14jzd6zmdq79nw73p4bx1l1wnhwibjfvnpdgnfz0h697fvkcbsps";
+      hash = "sha256-+urF5nYnGQi+s69du51ckUPLAw19kTsOt+ngVr9pX5I=";
     };
     propagatedBuildInputs = with pythonPackages; [ ];
   };
@@ -70,7 +70,7 @@ in rec {
       owner = "cozy-comfyui";
       repo = "cozy_comfyui";
       rev = "main";
-      sha256 = "0drf1qfbba54q22gfw6njr75qcb61h22pn25xmhnrkygdvwdjcn3";
+      hash = "sha256-wzLZ+G7Pz2xh7UXYKwQMZjFcTpbWcPeEwKSotRwOLjc=";
     };
     propagatedBuildInputs = with pythonPackages; [ ];
   };
@@ -82,7 +82,7 @@ in rec {
       owner = "cozy-comfyui";
       repo = "cozy_comfy";
       rev = "main";
-      sha256 = "1gzxvs8asvhgs5prndz8gbd4hpzshbwz2gw1nvx8j9zs6hy1cg48";
+      hash = "sha256-iDwWPDT6J4n6toE/8fmC+l9I2nroN5tv0Q9urZDe/b8=";
     };
     propagatedBuildInputs = with pythonPackages; [ ];
   };
@@ -94,7 +94,7 @@ in rec {
       owner = "ltdrdata";
       repo = "cstr";
       rev = "main";
-      sha256 = "0fy6z3z0zs8cnpx8ysjpy3nqwz6cqz4k0zgljkv8k7vq7qy9z0qz";
+      hash = "sha256-H4OfPD54n4n2lPR9MMnHzHyO7fBXao/6tQzpD/74xjs=";
     };
     propagatedBuildInputs = with pythonPackages; [ ];
   };
@@ -106,7 +106,7 @@ in rec {
       owner = "ltdrdata";
       repo = "ffmpy";
       rev = "f000737698b387ffaeab7cd871b0e9185811230d";
-      sha256 = "08mcym8r70987zbzbmcdfgf2dsw2dbcyaps2larbf463i0grma7p";
+      hash = "sha256-96iaH4jDELeyokJf5dlqgusm3HON1fXXPyiBk1H1rCI=";
     };
     propagatedBuildInputs = with pythonPackages; [ ];
   };
@@ -118,7 +118,7 @@ in rec {
       owner = "ltdrdata";
       repo = "img2texture";
       rev = "d6159abea44a0b2cf77454d3d46962c8b21eb9d3";
-      sha256 = "0kpirm765wrr06znb0h547wf8njm2k3jf0fmkssiryp037srxjg7";
+      hash = "sha256-58me9Rng+hy1ntUBJ8cUVVrk+CEFgmW/ATnzYk7N8U4=";
     };
     propagatedBuildInputs = with pythonPackages; [ ];
   };
