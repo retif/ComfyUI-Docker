@@ -14,11 +14,11 @@ check_package() {
     # Convert Python package names to nixpkgs format (dashes may become underscores)
     local nix_pkg=$(echo "$pkg" | sed 's/-/_/g' | cut -d'[' -f1)
 
-    if nix eval --raw "nixpkgs#python314Packages.${nix_pkg}.pname" 2>/dev/null >/dev/null; then
-        echo "  ✅ $pkg → python314Packages.${nix_pkg}"
+    if timeout 3 nix eval --raw "nixpkgs#python314Packages.${nix_pkg}.pname" 2>/dev/null >/dev/null; then
+        echo "  ✅ $pkg"
         return 0
     else
-        echo "  ❌ $pkg (needs custom definition)"
+        echo "  ❌ $pkg"
         return 1
     fi
 }
@@ -34,6 +34,7 @@ if [ -f "../cu130-megapak-pt210-py314/builder-scripts/pak3.txt" ]; then
 
     available=0
     missing=0
+    count=0
 
     while IFS= read -r line; do
         [[ "$line" =~ ^#.*$ ]] && continue
@@ -41,6 +42,7 @@ if [ -f "../cu130-megapak-pt210-py314/builder-scripts/pak3.txt" ]; then
         [[ "$line" =~ ^git\+ ]] && continue  # Skip git packages
 
         pkg=$(echo "$line" | xargs)
+        ((count++))
         if check_package "$pkg"; then
             ((available++))
         else
@@ -62,6 +64,7 @@ if [ -f "../cu130-megapak-pt210-py314/builder-scripts/pak5.txt" ]; then
 
     available=0
     missing=0
+    count=0
 
     while IFS= read -r line; do
         [[ "$line" =~ ^#.*$ ]] && continue
@@ -69,6 +72,7 @@ if [ -f "../cu130-megapak-pt210-py314/builder-scripts/pak5.txt" ]; then
         [[ "$line" =~ ^git\+ ]] && continue
 
         pkg=$(echo "$line" | xargs)
+        ((count++))
         if check_package "$pkg"; then
             ((available++))
         else
@@ -90,6 +94,7 @@ if [ -f "../cu130-megapak-pt210-py314/builder-scripts/pak7.txt" ]; then
 
     available=0
     missing=0
+    count=0
 
     while IFS= read -r line; do
         [[ "$line" =~ ^#.*$ ]] && continue
@@ -97,6 +102,7 @@ if [ -f "../cu130-megapak-pt210-py314/builder-scripts/pak7.txt" ]; then
         [[ "$line" =~ ^git\+ ]] && continue
 
         pkg=$(echo "$line" | xargs)
+        ((count++))
         if check_package "$pkg"; then
             ((available++))
         else
