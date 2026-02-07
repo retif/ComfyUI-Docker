@@ -244,27 +244,21 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     && cd /
 
 # Performance optimization libraries
-# Note: CUDA 13.0 binaries may not be available yet, using cu128 where needed
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -U uv \
-    && echo "Note: Skipping binary wheels (not yet available for Python 3.13 + CUDA 13.0)" \
-    || true
+# Install gh CLI to download artifacts from pytorch-wheels-builder
+RUN --mount=type=cache,target=/var/cache/zypp \
+    zypper --gpg-auto-import-keys install --no-confirm --auto-agree-with-licenses gh
 
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     # Update UV
-#     pip install -U uv \
-#     # Nunchaku (binary pair with PyTorch)
-#     && pip install \
-# https://github.com/nunchaku-tech/nunchaku/releases/download/v1.0.2/nunchaku-1.0.2+torch2.8-cp312-cp312-linux_x86_64.whl \
-#     # FlashAttention (version pair with xFormers, binary pair with PyTorch & CUDA)
-#     && pip install \
-# https://github.com/mjun0812/flash-attention-prebuild-wheels/releases/download/v0.3.14/flash_attn-2.8.2+cu128torch2.8-cp312-cp312-linux_x86_64.whl \
-#     # SageAttention
-#     && pip install \
-# https://github.com/YanWenKun/ComfyUI-Containerfiles/releases/download/sageattn2/sageattention-2.2.0-cp312-cp312-linux_x86_64.whl \
-#     # SpargeAttention (Sparse-SageAttention)
-#     && pip install \
-# https://github.com/YanWenKun/ComfyUI-Containerfiles/releases/download/sageattn2/spas_sage_attn-0.1.0-cp312-cp312-linux_x86_64.whl
+# Install custom-built wheels from GitHub Actions artifacts
+# https://github.com/oleks/pytorch-wheels-builder
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=secret,id=GITHUB_TOKEN \
+    pip install -U uv \
+    && echo "$(cat /run/secrets/GITHUB_TOKEN)" | gh auth login --with-token \
+    && gh run download 21769440938 --repo oleks/pytorch-wheels-builder --dir /tmp/wheels \
+    && gh run download 21769119652 --repo oleks/pytorch-wheels-builder --dir /tmp/wheels \
+    && gh run download 21769116283 --repo oleks/pytorch-wheels-builder --dir /tmp/wheels \
+    && pip install /tmp/wheels/*/*.whl \
+    && rm -rf /tmp/wheels
 
 ################################################################################
 # Bundle ComfyUI and ~47 custom nodes
