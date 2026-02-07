@@ -126,7 +126,7 @@ rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "1vs3fjsgrk4mkgvwbmq8cjj9pv1ywicxh07y5phrmi8g4g7vc2pb";
+      hash = "sha256-ZUi5A0AWa4XibT1bTpoR3mkIoDtrJIea/2Xm5vxbZ3w=";
     };
     propagatedBuildInputs = with pythonPackages; [ transformers ];
   };
