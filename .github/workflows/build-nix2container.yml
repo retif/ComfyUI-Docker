@@ -31,8 +31,8 @@ jobs:
             accept-flake-config = true
 
       # ✅ THIS IS THE KEY: Nix store caching with GitHub Actions
-      - name: Cache Nix store
-        uses: actions/cache@v4
+      - name: Restore Nix store cache
+        uses: actions/cache/restore@v4
         id: nix-cache
         with:
           path: |
@@ -42,7 +42,6 @@ jobs:
           key: nix-store-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock') }}
           restore-keys: |
             nix-store-${{ runner.os }}-
-          save-always: true  # Save cache even on failure
 
       - name: Cache status
         run: |
@@ -94,6 +93,17 @@ jobs:
           echo "- ✅ OCI layers automatically deduplicated at registry" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Unchanged layers not re-uploaded" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Cache key: \`nix-store-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock') }}\`" >> $GITHUB_STEP_SUMMARY
+
+      # Save cache even on build failure
+      - name: Save Nix store cache
+        uses: actions/cache/save@v4
+        if: always() && steps.nix-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            /nix/store
+            /nix/var/nix/db
+            ~/.cache/nix
+          key: nix-store-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock') }}
 
   # Optional: Build stats and comparison
   cache-stats:
