@@ -22,14 +22,19 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Install Node.js for GitHub Actions
+        run: |
+          nix-env -iA nixpkgs.nodejs_20
+          ln -sf $(which node) /__e/node20/bin/node || mkdir -p /__e/node20/bin && ln -sf $(which node) /__e/node20/bin/node
 
       - name: Configure Nix
         run: |
           mkdir -p /etc/nix
           echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
           echo "accept-flake-config = true" >> /etc/nix/nix.conf
+
+      - name: Checkout
+        uses: actions/checkout@v4
 
       # ✅ THIS IS THE KEY: Nix store caching with GitHub Actions
       - name: Restore Nix store cache
