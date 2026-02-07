@@ -22,7 +22,8 @@ rec {
       inherit pname version;
       hash = "sha256-A+Fh/GnUldryubXI1bQ9BuIUVSDARye1vaVtSfGkOrU=";
     };
-    propagatedBuildInputs = with pythonPackages; [ numpy pyyaml psutil ];
+    propagatedBuildInputs = with pythonPackages; [ numpy pyyaml psutil huggingface-hub safetensors ];
+    doCheck = false;  # Skip runtime check - torch will be available in final image
   };
 
   diffusers = pythonPackages.buildPythonPackage rec {
