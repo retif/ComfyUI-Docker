@@ -14,6 +14,7 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-slim  # Lighter runner, uses containers instead of VMs
+    timeout-minutes: 120  # Large Nix builds can take time (default for ubuntu-slim is only 15m)
     permissions:
       contents: read
       packages: write
@@ -33,6 +34,19 @@ jobs:
           large-packages: true
           docker-images: true
           swap-storage: false  # Keep swap for large builds
+
+      # ✅ More aggressive disk space optimization
+      - name: Maximize build space
+        uses: easimon/maximize-build-space@master
+        with:
+          remove-dotnet: 'true'
+          remove-android: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+
+      # ✅ Nix-specific optimization (removes everything except Nix)
+      - name: Nothing but Nix
+        uses: wimpysworld/nothing-but-nix@main
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
@@ -55,11 +69,42 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-last-accessed: 604800  # 7 days
 
+      # ✅ Show what will be built for better visibility
+      - name: Show flake outputs
+        working-directory: cu130-megapak-pt210-py314-nix
+        run: |
+          echo "📦 Available flake outputs:"
+          nix flake show
+
+      - name: Check disk space before build
+        run: |
+          echo "💾 Disk space before build:"
+          df -h /
+
+      - name: Evaluate build plan
+        working-directory: cu130-megapak-pt210-py314-nix
+        run: |
+          echo "📋 Evaluating build plan..."
+          nix eval .#comfyui.imageName
+          nix eval .#comfyui.imageTag
+
       - name: Build ComfyUI image
         working-directory: cu130-megapak-pt210-py314-nix
         run: |
-          echo "Building image with nix2container..."
+          echo "🔨 Building ComfyUI image with nix2container..."
           nix build .#comfyui --print-build-logs
+
+      - name: Verify build result
+        working-directory: cu130-megapak-pt210-py314-nix
+        run: |
+          echo "✅ Build completed, checking result:"
+          ls -lh result
+          du -sh result
+
+      - name: Check disk space after build
+        run: |
+          echo "💾 Disk space after build:"
+          df -h /
 
       # ✅ Registry-level caching happens here automatically
       - name: Login to GHCR
