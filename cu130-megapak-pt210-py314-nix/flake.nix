@@ -147,6 +147,19 @@
           # Database
           sqlalchemy
 
+          # Geometry and visualization
+          shapely
+          trimesh
+
+          # Color and QR codes
+          webcolors
+          qrcode
+
+          # Additional utilities
+          yarl
+          tomli
+          pycocotools
+
           #####################################################################
           # PACKAGES FROM PAK7 (face analysis and utilities)
           #####################################################################
