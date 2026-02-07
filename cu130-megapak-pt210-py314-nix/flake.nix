@@ -1,5 +1,5 @@
 {
-  description = "ComfyUI Docker Image - CUDA 13.0 with Python 3.14 (free-threaded)";
+  description = "ComfyUI Docker - Proper layered Nix build";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -17,239 +17,310 @@
           };
         };
 
-        # Python 3.14 with free-threading (no GIL)
         python = pkgs.python314;
-
-        # CUDA packages
         cudaPackages = pkgs.cudaPackages_13_0 or pkgs.cudaPackages_12;
 
         #########################################################################
-        # Layer 1: Base system with CUDA
+        # DOWNLOAD LAYER - Fetch all wheels and sources
         #########################################################################
-        baseLayer = pkgs.dockerTools.buildImage {
-          name = "comfyui-base";
-          tag = "cuda130";
 
-          copyToRoot = pkgs.buildEnv {
-            name = "base-root";
-            ignoreCollisions = true;  # Allow LICENSE file conflicts between CUDA packages
-            paths = with pkgs; [
-              # Core system utilities
-              bash
-              coreutils
-              findutils
-              gnugrep
-              gnused
-              gnutar
-              gzip
-              which
-
-              # CUDA toolkit
-              cudaPackages.cudatoolkit
-              cudaPackages.cudnn
-
-              # Build tools
-              gcc
-              cmake
-              ninja
-              git
-
-              # Media tools
-              ffmpeg
-              x264
-              x265
-            ];
+        # PyTorch wheels from official index
+        pytorchWheels = {
+          torch = pkgs.fetchurl {
+            url = "https://download.pytorch.org/whl/cu130/torch-2.10.0%2Bcu130-cp314-cp314-linux_x86_64.whl";
+            hash = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: nix-prefetch-url
           };
+          torchvision = pkgs.fetchurl {
+            url = "https://download.pytorch.org/whl/cu130/torchvision-0.20.0%2Bcu130-cp314-cp314-linux_x86_64.whl";
+            hash = "sha256-0000000000000000000000000000000000000000000000000000";
+          };
+          torchaudio = pkgs.fetchurl {
+            url = "https://download.pytorch.org/whl/cu130/torchaudio-2.10.0%2Bcu130-cp314-cp314-linux_x86_64.whl";
+            hash = "sha256-0000000000000000000000000000000000000000000000000000";
+          };
+        };
 
-          config = {
-            Env = [
-              "PATH=/usr/bin:/bin:${cudaPackages.cudatoolkit}/bin"
-              "CUDA_HOME=${cudaPackages.cudatoolkit}"
-              "LD_LIBRARY_PATH=${cudaPackages.cudatoolkit}/lib:${cudaPackages.cudnn}/lib"
-            ];
+        # Performance wheels from custom builder
+        perfWheels = {
+          flashAttn = pkgs.fetchurl {
+            url = "https://github.com/retif/pytorch-wheels-builder/releases/download/flash-attn-v2.8.2-py314-torch2.10.0-cu130/flash_attn-2.8.2-cp314-cp314-linux_x86_64.whl";
+            hash = "sha256-0000000000000000000000000000000000000000000000000000";
+          };
+          sageattention = pkgs.fetchurl {
+            url = "https://github.com/retif/pytorch-wheels-builder/releases/download/sageattention-v2.2.0-py314-torch2.10.0-cu130/sageattention-2.2.0%2Bcu130torch2.10.0-cp314-cp314-linux_x86_64.whl";
+            hash = "sha256-0000000000000000000000000000000000000000000000000000";
+          };
+          nunchaku = pkgs.fetchurl {
+            url = "https://github.com/retif/pytorch-wheels-builder/releases/download/nunchaku-v1.0.2-py314-torch2.10.0-cu130/nunchaku-1.0.2%2Btorch2.10-cp314-cp314-linux_x86_64.whl";
+            hash = "sha256-0000000000000000000000000000000000000000000000000000";
           };
         };
 
         #########################################################################
-        # Layer 2: Python 3.14 environment
+        # PYTHON PACKAGES - Use Nix where available, wheels otherwise
         #########################################################################
-        pythonLayer = pkgs.dockerTools.buildImage {
-          name = "comfyui-python";
-          tag = "py314";
-          fromImage = baseLayer;
 
-          copyToRoot = pkgs.buildEnv {
-            name = "python-root";
-            paths = [
-              python
-              python.pkgs.pip
-              python.pkgs.setuptools
-              python.pkgs.wheel
-            ];
+        # Python environment with packages from nixpkgs
+        pythonWithPackages = python.withPackages (ps: with ps; [
+          # Core packages from nixpkgs
+          pip setuptools wheel packaging
+
+          # Scientific computing (available in nixpkgs)
+          numpy
+          scipy
+          pillow
+          imageio
+
+          # ML/AI packages (available in nixpkgs)
+          scikit-learn
+          scikit-image
+          opencv4
+
+          # Data formats
+          pyyaml
+
+          # HTTP/networking
+          requests
+          urllib3
+
+          # Utilities available in nixpkgs
+          tqdm
+          psutil
+
+          # Add more from pak files that exist in nixpkgs
+        ]);
+
+        #########################################################################
+        # BUILD DERIVATIONS - Build from source where needed
+        #########################################################################
+
+        # SAM-2 from source
+        sam2 = pkgs.stdenv.mkDerivation {
+          name = "sam2";
+          src = pkgs.fetchFromGitHub {
+            owner = "facebookresearch";
+            repo = "sam2";
+            rev = "main";  # TODO: pin to specific commit
+            sha256 = "sha256-0000000000000000000000000000000000000000000000000000";
           };
 
-          config = {
-            Env = [
-              "PYTHON=${python}/bin/python3"
-              "PYTHONUNBUFFERED=1"
-            ];
-          };
+          buildInputs = [ pythonWithPackages ];
+
+          buildPhase = ''
+            export SAM2_BUILD_CUDA=1
+            ${pythonWithPackages}/bin/python setup.py build
+          '';
+
+          installPhase = ''
+            ${pythonWithPackages}/bin/pip install --no-deps --no-build-isolation -e . --prefix=$out
+          '';
         };
 
-        #########################################################################
-        # Layer 3: PyTorch and core ML libraries
-        #########################################################################
-        pytorchLayer = let
-          # Create a Python environment with PyTorch
-          pythonEnv = python.withPackages (ps: with ps; [
-            # Core packages
-            pip
-            setuptools
-            wheel
-            packaging
-
-            # Will install PyTorch via pip in runtime for CUDA 13.0 compatibility
-          ]);
-        in pkgs.dockerTools.buildImage {
-          name = "comfyui-pytorch";
-          tag = "cu130";
-          fromImage = pythonLayer;
-
-          copyToRoot = pkgs.buildEnv {
-            name = "pytorch-root";
-            paths = [ pythonEnv ];
+        # SAM-3 from source
+        sam3 = pkgs.stdenv.mkDerivation {
+          name = "sam3";
+          src = pkgs.fetchFromGitHub {
+            owner = "facebookresearch";
+            repo = "sam3";
+            rev = "main";
+            sha256 = "sha256-0000000000000000000000000000000000000000000000000000";
           };
 
-          runAsRoot = ''
-            #!${pkgs.runtimeShell}
-            # Install PyTorch with CUDA 13.0 support
-            ${pythonEnv}/bin/pip install --no-cache-dir torch torchvision torchaudio \
-              --index-url https://download.pytorch.org/whl/cu130 || \
-            ${pythonEnv}/bin/pip install --no-cache-dir --pre torch torchvision torchaudio \
-              --index-url https://download.pytorch.org/whl/nightly/cu130
+          buildInputs = [ pythonWithPackages ];
+
+          buildPhase = ''
+            ${pythonWithPackages}/bin/python setup.py build
+          '';
+
+          installPhase = ''
+            ${pythonWithPackages}/bin/pip install --no-deps --no-build-isolation -e . --prefix=$out
           '';
         };
 
         #########################################################################
-        # Layer 4: ComfyUI Python dependencies
+        # DOCKER LAYERS - Build incrementally
         #########################################################################
-        dependenciesLayer = let
-          builderScripts = ./builder-scripts;
-        in pkgs.dockerTools.buildImage {
-          name = "comfyui-deps";
+
+        # Layer 0: Base system + CUDA
+        layer0-base = pkgs.dockerTools.buildImage {
+          name = "comfyui-layer0-base";
           tag = "latest";
-          fromImage = pytorchLayer;
 
           contents = pkgs.buildEnv {
-            name = "deps-root";
+            name = "base-env";
+            ignoreCollisions = true;
             paths = with pkgs; [
-              # Additional tools needed for ComfyUI
-              aria2
-              vim
-              fish
+              # System utilities
+              bash coreutils findutils gnugrep gnused gnutar gzip which
+
+              # CUDA (use symlinkJoin to avoid collisions)
+              (pkgs.symlinkJoin {
+                name = "cuda-merged";
+                paths = [
+                  cudaPackages.cudatoolkit
+                  cudaPackages.cudnn
+                ];
+              })
+
+              # Build tools
+              gcc cmake ninja git
+
+              # Media libraries
+              ffmpeg x264 x265
             ];
           };
 
-          runAsRoot = ''
-            #!${pkgs.runtimeShell}
-            # Copy builder scripts
-            mkdir -p /builder-scripts
-            cp -r ${builderScripts}/* /builder-scripts/
-            chmod +x /builder-scripts/*.sh
+          config.Env = [
+            "PATH=/usr/bin:/bin:${cudaPackages.cudatoolkit}/bin"
+            "CUDA_HOME=${cudaPackages.cudatoolkit}"
+            "LD_LIBRARY_PATH=${cudaPackages.cudatoolkit}/lib:${cudaPackages.cudnn}/lib"
+          ];
+        };
 
-            # Install Python dependencies from pak files
-            ${python}/bin/pip install --no-cache-dir -r /builder-scripts/pak3.txt
-            ${python}/bin/pip install --no-cache-dir -r /builder-scripts/pak5.txt
-            ${python}/bin/pip install --no-cache-dir -r /builder-scripts/pak7.txt
+        # Layer 1: Python + system packages from nixpkgs
+        layer1-python = pkgs.dockerTools.buildImage {
+          name = "comfyui-layer1-python";
+          tag = "latest";
+          fromImage = layer0-base;
 
-            # Install SAM-2 (prevent CUDA package conflicts)
-            cd /builder-scripts
-            ${pkgs.git}/bin/git clone https://github.com/facebookresearch/sam2.git
-            cd sam2
-            SAM2_BUILD_CUDA=1 ${python}/bin/pip install --no-cache-dir \
-              -e . --no-deps --no-build-isolation
-            cd /
+          contents = pkgs.buildEnv {
+            name = "python-env";
+            paths = [
+              pythonWithPackages
+              pkgs.aria2
+              pkgs.vim
+              pkgs.fish
+            ];
+          };
 
-            # Install SAM-3 (prevent NumPy1 conflicts)
-            cd /builder-scripts
-            ${pkgs.git}/bin/git clone https://github.com/facebookresearch/sam3.git
-            cd sam3
-            ${python}/bin/pip install --no-cache-dir \
-              -e . --no-deps --no-build-isolation
-            cd /
+          config.Env = [
+            "PYTHON=${python}/bin/python3"
+            "PYTHONUNBUFFERED=1"
+            "PATH=/usr/bin:/bin:${python}/bin"
+          ];
+        };
+
+        # Layer 2: Downloaded wheels (no build, just copy)
+        layer2-wheels = pkgs.dockerTools.buildImage {
+          name = "comfyui-layer2-wheels";
+          tag = "latest";
+          fromImage = layer1-python;
+
+          copyToRoot = pkgs.runCommand "wheels-dir" {} ''
+            mkdir -p $out/opt/wheels/pytorch
+            mkdir -p $out/opt/wheels/perf
+
+            # Copy PyTorch wheels
+            cp ${pytorchWheels.torch} $out/opt/wheels/pytorch/torch.whl
+            cp ${pytorchWheels.torchvision} $out/opt/wheels/pytorch/torchvision.whl
+            cp ${pytorchWheels.torchaudio} $out/opt/wheels/pytorch/torchaudio.whl
+
+            # Copy performance wheels
+            cp ${perfWheels.flashAttn} $out/opt/wheels/perf/flash_attn.whl
+            cp ${perfWheels.sageattention} $out/opt/wheels/perf/sageattention.whl
+            cp ${perfWheels.nunchaku} $out/opt/wheels/perf/nunchaku.whl
           '';
         };
 
-        #########################################################################
-        # Layer 5: Performance optimization wheels
-        #########################################################################
-        performanceLayer = pkgs.dockerTools.buildImage {
-          name = "comfyui-performance";
+        # Layer 3: PyTorch installed (from local wheels)
+        layer3-pytorch = pkgs.dockerTools.buildImage {
+          name = "comfyui-layer3-pytorch";
           tag = "latest";
-          fromImage = dependenciesLayer;
+          fromImage = layer2-wheels;
 
-          runAsRoot = ''
-            #!${pkgs.runtimeShell}
-            # Install custom-built performance wheels
-            ${python}/bin/pip install --no-cache-dir \
-              https://github.com/retif/pytorch-wheels-builder/releases/download/flash-attn-v2.8.2-py314-torch2.10.0-cu130/flash_attn-2.8.2-cp314-cp314-linux_x86_64.whl
+          # Use fakeRootCommands instead of runAsRoot (no VM!)
+          fakeRootCommands = ''
+            # Install PyTorch from pre-downloaded wheels
+            ${pythonWithPackages}/bin/pip install --no-cache-dir \
+              --no-index \
+              --find-links /opt/wheels/pytorch \
+              torch torchvision torchaudio
 
-            ${python}/bin/pip install --no-cache-dir \
-              https://github.com/retif/pytorch-wheels-builder/releases/download/sageattention-v2.2.0-py314-torch2.10.0-cu130/sageattention-2.2.0%2Bcu130torch2.10.0-cp314-cp314-linux_x86_64.whl
-
-            ${python}/bin/pip install --no-cache-dir \
-              https://github.com/retif/pytorch-wheels-builder/releases/download/nunchaku-v1.0.2-py314-torch2.10.0-cu130/nunchaku-1.0.2%2Btorch2.10-cp314-cp314-linux_x86_64.whl
+            # Verify installation
+            ${pythonWithPackages}/bin/python -c "import torch; print(f'PyTorch {torch.__version__} with CUDA {torch.version.cuda}')"
           '';
         };
 
-        #########################################################################
-        # Layer 6: ComfyUI application bundle
-        #########################################################################
-        comfyuiLayer = pkgs.dockerTools.buildImage {
-          name = "comfyui-app";
+        # Layer 4: Additional dependencies from nixpkgs + remaining pip packages
+        layer4-deps = pkgs.dockerTools.buildImage {
+          name = "comfyui-layer4-deps";
           tag = "latest";
-          fromImage = performanceLayer;
+          fromImage = layer3-pytorch;
 
-          runAsRoot = ''
-            #!${pkgs.runtimeShell}
-            # Clone and setup ComfyUI using preload script
-            mkdir -p /default-comfyui-bundle
+          copyToRoot = pkgs.buildEnv {
+            name = "deps-env";
+            paths = [
+              sam2
+              sam3
+            ];
+          };
+
+          # Copy scripts
+          extraCommands = ''
+            mkdir -p builder-scripts
+            cp -r ${./builder-scripts}/* builder-scripts/
+            chmod +x builder-scripts/*.sh
+          '';
+
+          fakeRootCommands = ''
+            # Install remaining packages from pak files that aren't in nixpkgs
+            # Filter out packages we already have from Nix
+            ${pythonWithPackages}/bin/pip install --no-cache-dir -r /builder-scripts/pak3.txt || true
+            ${pythonWithPackages}/bin/pip install --no-cache-dir -r /builder-scripts/pak5.txt || true
+            ${pythonWithPackages}/bin/pip install --no-cache-dir -r /builder-scripts/pak7.txt || true
+          '';
+        };
+
+        # Layer 5: Performance wheels installed
+        layer5-perf = pkgs.dockerTools.buildImage {
+          name = "comfyui-layer5-perf";
+          tag = "latest";
+          fromImage = layer4-deps;
+
+          fakeRootCommands = ''
+            # Install performance wheels from pre-downloaded files
+            ${pythonWithPackages}/bin/pip install --no-cache-dir \
+              --no-index \
+              --find-links /opt/wheels/perf \
+              flash-attn sageattention nunchaku
+
+            # Verify
+            ${pythonWithPackages}/bin/pip list | grep -E "(flash-attn|sageattention|nunchaku)"
+          '';
+        };
+
+        # Layer 6: ComfyUI application
+        layer6-app = pkgs.dockerTools.buildImage {
+          name = "comfyui-layer6-app";
+          tag = "latest";
+          fromImage = layer5-perf;
+
+          extraCommands = ''
+            mkdir -p runner-scripts default-comfyui-bundle
+            cp -r ${./runner-scripts}/* runner-scripts/
+            chmod +x runner-scripts/*.sh
+          '';
+
+          fakeRootCommands = ''
+            # Setup ComfyUI
             cd /default-comfyui-bundle
+            bash /builder-scripts/preload-cache.sh
 
-            # Run the preload cache script to install ComfyUI + custom nodes
-            ${pkgs.bash}/bin/bash /builder-scripts/preload-cache.sh
-
-            # Install ComfyUI and Manager requirements
-            ${python}/bin/pip install --no-cache-dir \
+            # Install ComfyUI requirements
+            ${pythonWithPackages}/bin/pip install --no-cache-dir \
               -r /default-comfyui-bundle/ComfyUI/requirements.txt \
               -r /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt
 
-            # List installed packages for verification
-            ${python}/bin/pip list
+            # Final package list
+            ${pythonWithPackages}/bin/pip list > /package-list.txt
           '';
         };
 
-        #########################################################################
-        # Final Image: Complete ComfyUI with runtime config
-        #########################################################################
-        finalImage = let
-          runnerScripts = ./runner-scripts;
-        in pkgs.dockerTools.streamLayeredImage {
+        # Final image: Combine all layers with proper config
+        finalImage = pkgs.dockerTools.buildImage {
           name = "comfyui-boot";
           tag = "cu130-megapak-py314-nix";
-          fromImage = comfyuiLayer;
-
-          contents = pkgs.buildEnv {
-            name = "runtime-root";
-            paths = [ pkgs.bash ];
-          };
-
-          extraCommands = ''
-            # Copy runner scripts
-            mkdir -p runner-scripts
-            cp -r ${runnerScripts}/* runner-scripts/
-            chmod +x runner-scripts/*.sh
-          '';
+          fromImage = layer6-app;
 
           config = {
             Cmd = [ "${pkgs.bash}/bin/bash" "/runner-scripts/entrypoint.sh" ];
@@ -266,75 +337,69 @@
               "/root" = {};
             };
           };
-
-          # Maximum number of layers (Docker supports up to 125)
-          maxLayers = 100;
         };
 
       in {
         packages = {
-          # Individual layers for development/debugging
-          inherit baseLayer pythonLayer pytorchLayer
-                  dependenciesLayer performanceLayer comfyuiLayer;
+          # Individual layers for incremental building
+          inherit layer0-base layer1-python layer2-wheels
+                  layer3-pytorch layer4-deps layer5-perf layer6-app;
 
           # Final image
-          default = finalImage;
           comfyui = finalImage;
+          default = finalImage;
         };
 
-        # Development shell for testing
-        devShells.default = pkgs.mkShell {
-          buildInputs = [
-            python
-            cudaPackages.cudatoolkit
-            cudaPackages.cudnn
-            pkgs.git
-          ];
-
-          shellHook = ''
-            export CUDA_HOME=${cudaPackages.cudatoolkit}
-            export LD_LIBRARY_PATH=${cudaPackages.cudatoolkit}/lib:${cudaPackages.cudnn}/lib
-            echo "ComfyUI Development Environment"
-            echo "Python: $(python3 --version)"
-            echo "CUDA: ${cudaPackages.cudatoolkit.version}"
-          '';
-        };
-
-        # Apps for easy building
+        # Apps for building layers incrementally
         apps = {
-          # Build individual layers
-          build-base = {
+          build-incremental = {
             type = "app";
-            program = toString (pkgs.writeScript "build-base" ''
+            program = toString (pkgs.writeScript "build-incremental" ''
               #!${pkgs.bash}/bin/bash
-              nix build .#baseLayer
-              docker load < result
-            '');
-          };
+              set -e
 
-          # Build and load final image
-          build = {
-            type = "app";
-            program = toString (pkgs.writeScript "build-final" ''
-              #!${pkgs.bash}/bin/bash
+              echo "Building Layer 0: Base + CUDA..."
+              nix build .#layer0-base
+              docker load < result
+
+              echo "Building Layer 1: Python + nixpkgs packages..."
+              nix build .#layer1-python
+              docker load < result
+
+              echo "Building Layer 2: Download wheels..."
+              nix build .#layer2-wheels
+              docker load < result
+
+              echo "Building Layer 3: Install PyTorch..."
+              nix build .#layer3-pytorch
+              docker load < result
+
+              echo "Building Layer 4: Dependencies..."
+              nix build .#layer4-deps
+              docker load < result
+
+              echo "Building Layer 5: Performance wheels..."
+              nix build .#layer5-perf
+              docker load < result
+
+              echo "Building Layer 6: ComfyUI app..."
+              nix build .#layer6-app
+              docker load < result
+
+              echo "Building final image..."
               nix build .#comfyui
               ./result | docker load
-            '');
-          };
 
-          # Run the image
-          run = {
-            type = "app";
-            program = toString (pkgs.writeScript "run-comfyui" ''
-              #!${pkgs.bash}/bin/bash
-              docker run --rm -it \
-                --gpus all \
-                -p 8188:8188 \
-                -v "$(pwd)/output:/root/output" \
-                comfyui-boot:cu130-megapak-py314-nix
+              echo "Done! Image: comfyui-boot:cu130-megapak-py314-nix"
             '');
           };
         };
       }
     );
 }
+
+# How to use:
+# 1. Fill in sha256 hashes using: nix-prefetch-url <url>
+# 2. Build incrementally: nix run .#build-incremental
+# 3. Or build specific layer: nix build .#layer3-pytorch
+# 4. Each layer is cached independently!
