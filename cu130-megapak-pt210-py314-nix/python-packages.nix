@@ -38,7 +38,7 @@ in rec {
     version = "2.10.0+cu130";
     src = fetchurl {
       url = "https://download.pytorch.org/whl/cu130/torch-2.10.0%2Bcu130-cp314-cp314-manylinux_2_28_x86_64.whl";
-      hash = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      hash = "sha256-1wx21mdjbp25zn09ddnby8zfzm6vfb6n8vj9bamc38vx3dwn2nnv";
       name = "torch-2.10.0-cu130-cp314-cp314-manylinux_2_28_x86_64.whl";  # Decode %2B
     };
   };
@@ -59,7 +59,7 @@ in rec {
     version = "2.10.0+cu130";
     src = fetchurl {
       url = "https://download.pytorch.org/whl/cu130/torchaudio-2.10.0%2Bcu130-cp314-cp314-manylinux_2_28_x86_64.whl";
-      hash = "sha256-0000000000000000000000000000000000000000000000000000";
+      hash = "sha256-0485n0dwhp0j9qya2gr07gg0f60kdd30dz32kv8i4s3fxvzq0ixw";
       name = "torchaudio-2.10.0-cu130-cp314-cp314-manylinux_2_28_x86_64.whl";  # Decode %2B
     };
     propagatedBuildInputs = [ torch ];
@@ -84,7 +84,7 @@ in rec {
     version = "2.2.0+cu130torch2.10.0";
     src = fetchurl {
       url = "https://github.com/retif/pytorch-wheels-builder/releases/download/sageattention-v2.2.0-py314-torch2.10.0-cu130/sageattention-2.2.0%2Bcu130torch2.10.0-cp314-cp314-linux_x86_64.whl";
-      hash = "sha256-0000000000000000000000000000000000000000000000000000";
+      hash = "sha256-0phd9dlmf4z2f4gdvdvpks7yi2iwkkh1l96l25wrjvq5wpf0p08j";
       name = "sageattention-2.2.0-cu130torch2.10.0-cp314-cp314-linux_x86_64.whl";  # Decode %2B to avoid Nix path errors
     };
     propagatedBuildInputs = [ torch ];
@@ -95,7 +95,7 @@ in rec {
     version = "1.0.2+torch2.10";
     src = fetchurl {
       url = "https://github.com/retif/pytorch-wheels-builder/releases/download/nunchaku-v1.0.2-py314-torch2.10.0-cu130/nunchaku-1.0.2%2Btorch2.10-cp314-cp314-linux_x86_64.whl";
-      hash = "sha256-0000000000000000000000000000000000000000000000000000";
+      hash = "sha256-0k0n5zx4m31pcq1ka2b3a9xx1shkdn5mjlaps7a4why8za5d2xv4";
       name = "nunchaku-1.0.2-torch2.10-cp314-cp314-linux_x86_64.whl";  # Decode %2B to avoid Nix path errors
     };
     propagatedBuildInputs = [ torch ];
