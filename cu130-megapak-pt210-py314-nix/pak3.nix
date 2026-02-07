@@ -32,7 +32,7 @@ rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      hash = "sha256-y8SYrmP0q/x8OgdknNy+4invL5qaHw0ZybuvIvjTDB8=";
+      hash = "sha256-sdAac+RdQ6BjDCmRc5Fd3dafxQ8q6PKrXeT9JF6u1y8=";
     };
     propagatedBuildInputs = with pythonPackages; [
       numpy pillow requests regex
