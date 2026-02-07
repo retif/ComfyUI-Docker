@@ -45,18 +45,6 @@ jobs:
         name: Git checkout
         uses: actions/checkout@v6
 
-      # Cache Python source downloads and build artifacts
-      -
-        name: Cache Python build artifacts
-        uses: actions/cache@v4
-        with:
-          path: |
-            /tmp/python-build
-            ~/.cache/pip
-          key: python314-build-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-source/Dockerfile') }}
-          restore-keys: |
-            python314-build-${{ runner.os }}-
-
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -184,6 +172,9 @@ jobs:
           cache-from: |
             type=registry,ref=ghcr.io/${{ github.repository_owner }}/comfyui-boot:buildcache-py314-source
             type=gha
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/comfyui-boot:buildcache-py314-source,mode=max
+            type=gha,mode=max
           push: true
       -
         name: Create GitHub Release
