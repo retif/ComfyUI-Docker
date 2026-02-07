@@ -60,6 +60,7 @@ declare -A perf_wheels=(
     ["flash-attn"]="https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3%2Bcu12torch2.5.1cxx11abiFALSE-cp314-cp314-linux_x86_64.whl|flash_attn-2.7.3-cu12torch2.5.1cxx11abiFALSE-cp314-cp314-linux_x86_64.whl"
     ["sageattention"]="https://github.com/thu-ml/SageAttention/releases/download/v2.1.0/sageattention-2.1.0%2Bcu124torch2.5.1-cp314-cp314-linux_x86_64.whl|sageattention-2.1.0-cu124torch2.5.1-cp314-cp314-linux_x86_64.whl"
     ["nunchaku"]="https://github.com/chengzeyi/nunchaku/releases/download/v0.3.3/nunchaku-0.3.3%2Bcu124torch2.5.1-cp314-cp314-linux_x86_64.whl|nunchaku-0.3.3-cu124torch2.5.1-cp314-cp314-linux_x86_64.whl"
+    ["cupy-cuda13x"]="https://github.com/cupy/cupy/releases/download/v14.0.0rc1/cupy_cuda13x-14.0.0rc1-cp314-cp314-manylinux2014_x86_64.whl|cupy_cuda13x-14.0.0rc1-cp314-cp314-manylinux2014_x86_64.whl"
 )
 
 for package in "${!perf_wheels[@]}"; do
@@ -219,7 +220,7 @@ while IFS=: read -r package hash; do
 
     # Different sed patterns for different package types
     case "$package" in
-        torch|torchvision|torchaudio|flash-attn|sageattention|nunchaku)
+        torch|torchvision|torchaudio|flash-attn|sageattention|nunchaku|cupy-cuda13x)
             # For wheel packages: look for sha256 = "..."
             if sed -i "/$package = buildWheel {/,/};/s|sha256 = \".*\";|sha256 = \"$hash_plain\";|" "$TARGET_FILE" 2>/dev/null; then
                 echo "  ✅ Updated $package"

@@ -50,6 +50,7 @@
           customPythonPackages.flash-attn
           customPythonPackages.sageattention
           customPythonPackages.nunchaku
+          customPythonPackages.cupy-cuda13x
 
           #####################################################################
           # GIT PACKAGES (from custom packages - built from source)

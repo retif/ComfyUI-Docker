@@ -103,6 +103,16 @@ in rec {
     propagatedBuildInputs = [ torch ];
   };
 
+  cupy-cuda13x = buildWheel {
+    pname = "cupy-cuda13x";
+    version = "14.0.0rc1";
+    src = fetchurl {
+      url = "https://github.com/cupy/cupy/releases/download/v14.0.0rc1/cupy_cuda13x-14.0.0rc1-cp314-cp314-manylinux2014_x86_64.whl";
+      sha256 = "083z0r6sfcx0k2406a3dk7n9nxk1g7ddrq3jh25nwvbk87s5dwxr";
+    };
+    propagatedBuildInputs = [ pythonPackages.numpy ];
+  };
+
   #########################################################################
   # GIT PACKAGES (Built from source)
   #########################################################################
