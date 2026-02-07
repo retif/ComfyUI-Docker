@@ -145,6 +145,9 @@ ENV PATH="${PATH}:/usr/local/cuda-13.0/bin" \
 RUN --mount=type=cache,target=/var/cache/zypp \
     zypper --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
+make \
+gcc \
+g++ \
 libopenssl-devel \
 libffi-devel \
 libbz2-devel \
