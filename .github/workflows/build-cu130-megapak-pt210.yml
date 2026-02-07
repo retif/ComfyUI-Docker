@@ -116,8 +116,9 @@ jobs:
           NUNCHAKU_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 pip show nunchaku 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
           echo "nunchaku_version=${NUNCHAKU_VERSION}" >> $GITHUB_OUTPUT
 
-          # Create version tag
+          # Create version tag (sanitize + to - for Docker tag compatibility)
           VERSION_TAG="py${PYTHON_VERSION}-pt${PYTORCH_VERSION}-cu${CUDA_VERSION}-comfy${COMFYUI_VERSION}"
+          VERSION_TAG="${VERSION_TAG//+/-}"
           echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
 
           echo "Python: ${PYTHON_VERSION}"
