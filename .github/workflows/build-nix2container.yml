@@ -24,8 +24,8 @@ jobs:
     steps:
       - name: Install Node.js for GitHub Actions
         run: |
-          nix-env -iA nixpkgs.nodejs_20
-          ln -sf $(which node) /__e/node20/bin/node || mkdir -p /__e/node20/bin && ln -sf $(which node) /__e/node20/bin/node
+          nix-env -iA nixpkgs.nodejs_20 nixpkgs.git
+          echo "$(dirname $(which node))" >> $GITHUB_PATH
 
       - name: Configure Nix
         run: |
