@@ -101,7 +101,6 @@ jobs:
         run: |
           echo "Building Layer 01: Base + CUDA..."
           nix build .#layer01-base-cuda --print-build-logs
-          chmod +x result
           ./result | docker load
           docker tag comfyui-layer01-base-cuda:cu130-megapak-py314-nix \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer01-base-cuda
@@ -122,7 +121,6 @@ jobs:
         run: |
           echo "Building Layer 02: Python 3.14 + Tools..."
           nix build .#layer02-python-tools --print-build-logs
-          chmod +x result
           ./result | docker load
           docker tag comfyui-layer02-python-tools:cu130-megapak-py314-nix \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer02-python-tools
@@ -143,7 +141,6 @@ jobs:
         run: |
           echo "Building Layer 03: GCC 15..."
           nix build .#layer03-gcc15 --print-build-logs
-          chmod +x result
           ./result | docker load
           docker tag comfyui-layer03-gcc15:cu130-megapak-py314-nix \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer03-gcc15
@@ -164,7 +161,6 @@ jobs:
         run: |
           echo "Building Layer 04: PyTorch..."
           nix build .#layer04-pytorch --print-build-logs
-          chmod +x result
           ./result | docker load
           docker tag comfyui-layer04-pytorch:cu130-megapak-py314-nix \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer04-pytorch
@@ -185,7 +181,6 @@ jobs:
         run: |
           echo "Building Layer 05: pak3 Essentials..."
           nix build .#layer05-pak3 --print-build-logs
-          chmod +x result
           ./result | docker load
           docker tag comfyui-layer05-pak3:cu130-megapak-py314-nix \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer05-pak3
@@ -206,7 +201,6 @@ jobs:
         run: |
           echo "Building Layer 06: CuPy..."
           nix build .#layer06-cupy --print-build-logs
-          chmod +x result
           ./result | docker load
           docker tag comfyui-layer06-cupy:cu130-megapak-py314-nix \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer06-cupy
@@ -227,7 +221,6 @@ jobs:
         run: |
           echo "Building Layer 07: pak5 Extended..."
           nix build .#layer07-pak5 --print-build-logs
-          chmod +x result
           ./result | docker load
           docker tag comfyui-layer07-pak5:cu130-megapak-py314-nix \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer07-pak5
@@ -248,7 +241,6 @@ jobs:
         run: |
           echo "Building Layer 08: pak7 Face/Git..."
           nix build .#layer08-pak7 --print-build-logs
-          chmod +x result
           ./result | docker load
           docker tag comfyui-layer08-pak7:cu130-megapak-py314-nix \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer08-pak7
@@ -269,7 +261,6 @@ jobs:
         run: |
           echo "Building Layer 09: SAM (placeholder)..."
           nix build .#layer09-sam --print-build-logs
-          chmod +x result
           ./result | docker load
           docker tag comfyui-layer09-sam:cu130-megapak-py314-nix \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer09-sam
@@ -290,7 +281,6 @@ jobs:
         run: |
           echo "Building Layer 10: Performance Libraries..."
           nix build .#layer10-performance --print-build-logs
-          chmod +x result
           ./result | docker load
           docker tag comfyui-layer10-performance:cu130-megapak-py314-nix \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer10-performance
@@ -311,7 +301,6 @@ jobs:
         run: |
           echo "Building Layer 11: Application Scripts..."
           nix build .#layer11-app --print-build-logs
-          chmod +x result
           ./result | docker load
           docker tag comfyui-layer11-app:cu130-megapak-py314-nix \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer11-app
@@ -326,7 +315,6 @@ jobs:
         run: |
           echo "Building Layer 12: ComfyUI Bundle (always rebuild)..."
           nix build .#layer12-comfyui --print-build-logs
-          chmod +x result
           ./result | docker load
 
       #########################################################################
