@@ -143,7 +143,7 @@ ENV PATH="${PATH}:/usr/local/cuda-13.0/bin" \
 # Install build dependencies first
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --gpg-auto-import-keys \
+    zypper-retry --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
 make \
 gcc \
@@ -194,14 +194,14 @@ RUN ln -sf /usr/local/bin/python3.14 /usr/local/bin/python3 \
 # System tools and libraries
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --gpg-auto-import-keys \
+    zypper-retry --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
 Mesa-libGL-devel \
 Mesa-libEGL-devel \
 libgthread-2_0-0
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --gpg-auto-import-keys \
+    zypper-retry --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
 make \
 cmake \
@@ -227,7 +227,7 @@ ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 # GCC 15
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --gpg-auto-import-keys \
+    zypper-retry --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
 gcc15 \
 gcc15-c++ \
