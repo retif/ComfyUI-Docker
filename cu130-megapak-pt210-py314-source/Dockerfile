@@ -148,6 +148,7 @@ RUN --mount=type=cache,target=/var/cache/zypp \
 make \
 gcc \
 gcc-c++ \
+findutils \
 libopenssl-devel \
 libffi-devel \
 libbz2-devel \
