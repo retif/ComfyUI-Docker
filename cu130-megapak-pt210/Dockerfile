@@ -256,13 +256,13 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -U uv \
     # SageAttention v2.2.0 for Python 3.13 from GitHub release
     && pip install \
-https://github.com/oleks/pytorch-wheels-builder/releases/download/sageattention-v2.2.0-py313-torch2.10.0-cu130/sageattention-2.2.0+cu130torch2.10.0-cp313-cp313-linux_x86_64.whl \
+https://github.com/retif/pytorch-wheels-builder/releases/download/sageattention-v2.2.0-py313-torch2.10.0-cu130/sageattention-2.2.0%2Bcu130torch2.10.0-cp313-cp313-linux_x86_64.whl \
     # Nunchaku v1.0.2 for Python 3.13 from GitHub release
     && pip install \
-https://github.com/oleks/pytorch-wheels-builder/releases/download/nunchaku-v1.0.2-py313-torch2.10.0-cu130/nunchaku-1.0.2+torch2.10-cp313-cp313-linux_x86_64.whl \
+https://github.com/retif/pytorch-wheels-builder/releases/download/nunchaku-v1.0.2-py313-torch2.10.0-cu130/nunchaku-1.0.2%2Btorch2.10-cp313-cp313-linux_x86_64.whl \
     # Flash Attention from GitHub Actions artifact (no py313 release yet)
     && echo "$(cat /run/secrets/GITHUB_TOKEN)" | gh auth login --with-token \
-    && gh run download 21769440938 --repo oleks/pytorch-wheels-builder --dir /tmp/flash-attn \
+    && gh run download 21769440938 --repo retif/pytorch-wheels-builder --dir /tmp/flash-attn \
     && pip install /tmp/flash-attn/*/*.whl \
     && rm -rf /tmp/flash-attn
 
