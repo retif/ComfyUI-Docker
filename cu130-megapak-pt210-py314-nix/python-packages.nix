@@ -112,7 +112,7 @@ in rec {
       owner = "openai";
       repo = "CLIP";
       rev = "main";
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: pin commit
+      sha256 = "sha256-14jzd6zmdq79nw73p4bx1l1wnhwibjfvnpdgnfz0h697fvkcbsps";
     };
     propagatedBuildInputs = with pythonPackages; [ torch torchvision ftfy regex tqdm ];
   };
@@ -124,7 +124,7 @@ in rec {
       owner = "cozy-comfyui";
       repo = "cozy_comfyui";
       rev = "main";
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";
+      sha256 = "sha256-0b064j57qhivz8bnsjqbvd941h7c1d9rixdyahblrgdjlsj0w9nm";
     };
   };
 
@@ -135,7 +135,7 @@ in rec {
       owner = "cozy-comfyui";
       repo = "cozy_comfy";
       rev = "main";
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";
+      sha256 = "sha256-11kkcvy7jmqab4dj4y0983k8bylz89g331m9wli08qljzji5fm25";
     };
   };
 
@@ -146,7 +146,7 @@ in rec {
       owner = "ltdrdata";
       repo = "cstr";
       rev = "main";
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";
+      sha256 = "sha256-1fm22x63ijqszc3a38f7hdfglhbx16pwdkz8b9j5a81v966yf06d";
     };
   };
 
@@ -157,7 +157,7 @@ in rec {
       owner = "ltdrdata";
       repo = "ffmpy";
       rev = "main";
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";
+      sha256 = "sha256-08mcym8r70987zbzbmcdfgf2dsw2dbcyaps2larbf463i0grma7p";
     };
   };
 
@@ -168,7 +168,7 @@ in rec {
       owner = "ltdrdata";
       repo = "img2texture";
       rev = "main";
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";
+      sha256 = "sha256-0kpirm765wrr06znb0h547wf8njm2k3jf0fmkssiryp037srxjg7";
     };
   };
 
