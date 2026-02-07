@@ -22,6 +22,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ✅ Free up disk space before build (recommended by cache-nix-action)
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false  # Keep swap for large builds
+
       - name: Install Nix
         uses: cachix/install-nix-action@v27
         with:
