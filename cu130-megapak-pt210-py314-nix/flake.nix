@@ -32,6 +32,7 @@
 
           copyToRoot = pkgs.buildEnv {
             name = "base-root";
+            ignoreCollisions = true;  # Allow LICENSE file conflicts between CUDA packages
             paths = with pkgs; [
               # Core system utilities
               bash
