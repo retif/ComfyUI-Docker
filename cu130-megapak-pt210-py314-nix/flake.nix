@@ -305,11 +305,83 @@
           };
         };
 
+        # Individual layer packages for caching
+        # Build each layer independently so workflows can cache them
+        layer0-base = nix2containerPkgs.nix2container.buildImage {
+          name = "comfyui-layer0-base";
+          tag = "cuda130";
+          layers = [ (builtins.elemAt imageLayers 0) (builtins.elemAt imageLayers 1) ];
+          config = {
+            Cmd = [ "${pkgs.bash}/bin/bash" ];
+          };
+        };
+
+        layer1-python = nix2containerPkgs.nix2container.buildImage {
+          name = "comfyui-layer1-python";
+          tag = "py314";
+          layers = builtins.genList (i: builtins.elemAt imageLayers i) 4; # layers 0-3
+          config = {
+            Cmd = [ "${pkgs.bash}/bin/bash" ];
+          };
+        };
+
+        layer2-wheels = nix2containerPkgs.nix2container.buildImage {
+          name = "comfyui-layer2-wheels";
+          tag = "latest";
+          layers = builtins.genList (i: builtins.elemAt imageLayers i) 5; # layers 0-4
+          config = {
+            Cmd = [ "${pkgs.bash}/bin/bash" ];
+          };
+        };
+
+        layer3-pytorch = nix2containerPkgs.nix2container.buildImage {
+          name = "comfyui-layer3-pytorch";
+          tag = "cu130";
+          layers = builtins.genList (i: builtins.elemAt imageLayers i) 7; # layers 0-6
+          config = {
+            Cmd = [ "${pkgs.bash}/bin/bash" ];
+          };
+        };
+
+        layer4-deps = nix2containerPkgs.nix2container.buildImage {
+          name = "comfyui-layer4-deps";
+          tag = "latest";
+          layers = builtins.genList (i: builtins.elemAt imageLayers i) 10; # layers 0-9
+          config = {
+            Cmd = [ "${pkgs.bash}/bin/bash" ];
+          };
+        };
+
+        layer5-perf = nix2containerPkgs.nix2container.buildImage {
+          name = "comfyui-layer5-perf";
+          tag = "latest";
+          layers = builtins.genList (i: builtins.elemAt imageLayers i) 11; # layers 0-10
+          config = {
+            Cmd = [ "${pkgs.bash}/bin/bash" ];
+          };
+        };
+
+        layer6-app = nix2containerPkgs.nix2container.buildImage {
+          name = "comfyui-layer6-app";
+          tag = "latest";
+          layers = imageLayers; # all layers
+          copyToRoot = [
+            builderScripts
+            runnerScripts
+          ];
+          config = {
+            Cmd = [ "${pkgs.bash}/bin/bash" "/runner-scripts/entrypoint.sh" ];
+          };
+        };
+
       in {
         packages = {
           # Main image
           comfyui = comfyuiImage;
           default = comfyuiImage;
+
+          # Individual layers for caching
+          inherit layer0-base layer1-python layer2-wheels layer3-pytorch layer4-deps layer5-perf layer6-app;
 
           # Expose Python environment for debugging
           pythonWithAllPackages = python.withPackages (ps: packageList.all);

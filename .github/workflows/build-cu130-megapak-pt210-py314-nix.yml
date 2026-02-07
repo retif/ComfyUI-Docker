@@ -4,10 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    paths-ignore:
-      - '**'
-      - '!cu130-megapak-pt210-py314-nix/**'
-      - '!.github/workflows/build-cu130-megapak-pt210-py314-nix-cached.yml'
+    paths:
+      - 'cu130-megapak-pt210-py314-nix/**'
+      - '.github/workflows/build-cu130-megapak-pt210-py314-nix.yml'
 
 jobs:
 
@@ -47,9 +46,10 @@ jobs:
             ~/.cache/nix
             /nix/var/nix/db
             /nix/var/nix/gcroots
-          key: nix-store-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock', 'cu130-megapak-pt210-py314-nix/flake-layered.nix') }}
+          key: nix-store-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock', 'cu130-megapak-pt210-py314-nix/**/*.nix') }}
           restore-keys: |
             nix-store-${{ runner.os }}-
+          save-always: true
 
       - name: Install Nix
         uses: cachix/install-nix-action@v25
