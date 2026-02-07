@@ -47,7 +47,7 @@ rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      hash = "sha256-fHDrUyAVzS+a21PxAftseUWYjQI6CF0SfRVz3EndAIM=";
+      hash = "sha256-mzw9kPhPsmf+ZNN1oHt/iRLYF8+GAJrhNKoD4YGVBuw=";
     };
     propagatedBuildInputs = with pythonPackages; [ wcwidth ];
   };
@@ -61,7 +61,7 @@ rec {
     version = "4.10.0.84";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      hash = "sha256-7ksJGQJtjFM662mxbG7EqJGi9oRO+qFBIb9og4dTIJw=";
+      hash = "sha256-Sj6uDtnK3xq+kpOmk4olpUDi/W1/wwhZXKpYlsizagw=";
     };
     format = "wheel";
     propagatedBuildInputs = with pythonPackages; [ numpy ];
@@ -72,7 +72,7 @@ rec {
     version = "4.10.0.84";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      hash = "sha256-vpHGyB6DlhPG87FXVb9xeJg5KJ0ONED6sJPgcIUW/88=";
+      hash = "sha256-Y1ElDbl+H5HzGv3sJDavsciVlOPaAoUeDwHiDqFrvZ4=";
     };
     format = "wheel";
     propagatedBuildInputs = with pythonPackages; [ numpy ];
@@ -85,7 +85,7 @@ rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      hash = "sha256-G4FrTEWHinNTGlAKRtv2HmRux6dJv4pN16WDOgTiiAg=";
+      hash = "sha256-H43WJoylovLsBLE8SNpN+5C6LPrn4x4MyA039lIPo/E=";
     };
     propagatedBuildInputs = with pythonPackages; [ ];
   };
@@ -101,7 +101,7 @@ rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      hash = "sha256-qExzqexWCm40fbonFuoazM9xmHrvreAriCzIncCg7iE=";
+      hash = "sha256-kMzweJTWrjglm3qnyU1oMAL142D9Q0cchPnabDr7ig0=";
     };
     propagatedBuildInputs = with pythonPackages; [ pyyaml huggingface-hub ];
   };
@@ -113,7 +113,7 @@ rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      hash = "sha256-pQjN2HdmztqvVaQZgSv59JOv+P/8AswZ31qOLnzLlCo=";
+      hash = "sha256-rruiSHCPuQ3vIMzLpvVb3dE0pY3kP7IrDFyg86ifqYQ=";
     };
     propagatedBuildInputs = with pythonPackages; [ numpy ];
     doCheck = false;  # Avoid circular dependencies with torch
@@ -138,7 +138,7 @@ rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      hash = "sha256-widkhrAvDxuQvhVfLIukqOGU1Cd1eG22IvrM1lLY6Aw=";
+      hash = "sha256-yoB9AWLNFs7xWo/uy4YtcxnnoJvbE675J5aORQQP7YA=";
     };
   };
 
@@ -153,7 +153,7 @@ rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      hash = "sha256-/qNxyU1j44phHBe7uF/kAOnI3bnoaEqc0OR3hqS8PHM=";
+      hash = "sha256-8CVNx0AGR2gKBy7gJQm/1GECtgvf7KMhV21NSBfn/pc=";
     };
   };
 }
