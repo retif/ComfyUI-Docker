@@ -77,16 +77,21 @@ jobs:
           PYTORCH_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 pip show torch | grep '^Version:' | awk '{print $2}')
           echo "pytorch_version=${PYTORCH_VERSION}" >> $GITHUB_OUTPUT
 
+          # CUDA version (hardcoded as 13.0 for this build)
+          CUDA_VERSION="13.0"
+          echo "cuda_version=${CUDA_VERSION}" >> $GITHUB_OUTPUT
+
           # Extract ComfyUI version
           COMFYUI_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 bash -c "cd /default-comfyui-bundle/ComfyUI && git describe --tags --always" || echo "unknown")
           echo "comfyui_version=${COMFYUI_VERSION}" >> $GITHUB_OUTPUT
 
           # Create version tag
-          VERSION_TAG="py${PYTHON_VERSION}-pt${PYTORCH_VERSION}-comfy${COMFYUI_VERSION}"
+          VERSION_TAG="py${PYTHON_VERSION}-pt${PYTORCH_VERSION}-cu${CUDA_VERSION}-comfy${COMFYUI_VERSION}"
           echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
 
           echo "Python: ${PYTHON_VERSION}"
           echo "PyTorch: ${PYTORCH_VERSION}"
+          echo "CUDA: ${CUDA_VERSION}"
           echo "ComfyUI: ${COMFYUI_VERSION}"
           echo "Version Tag: ${VERSION_TAG}"
       -
