@@ -42,6 +42,7 @@ jobs:
           key: nix-store-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock') }}
           restore-keys: |
             nix-store-${{ runner.os }}-
+          save-always: true  # Save cache even on failure
 
       - name: Cache status
         run: |
