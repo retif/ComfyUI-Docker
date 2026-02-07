@@ -25,6 +25,8 @@ let
   buildFromGit = { pname, version, src, ... }@args:
     buildPythonPackage ({
       inherit pname version src;
+      pyproject = true;
+      build-system = with pythonPackages; [ setuptools ];
       doCheck = false;
     } // builtins.removeAttrs args [ "pname" "version" "src" ]);
 
@@ -114,7 +116,9 @@ in rec {
       rev = "main";
       sha256 = "sha256-14jzd6zmdq79nw73p4bx1l1wnhwibjfvnpdgnfz0h697fvkcbsps";
     };
-    propagatedBuildInputs = with pythonPackages; [ torch torchvision ftfy regex tqdm ];
+    pyproject = true;
+    build-system = with pythonPackages; [ setuptools ];
+    propagatedBuildInputs = with pythonPackages; [ torch ftfy regex tqdm ];  # Removed torchvision dependency
   };
 
   cozy-comfyui = buildFromGit {

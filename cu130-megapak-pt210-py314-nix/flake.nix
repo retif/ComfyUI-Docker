@@ -41,7 +41,7 @@
           # PYTORCH (from custom packages)
           #####################################################################
           customPythonPackages.torch
-          customPythonPackages.torchvision
+          # customPythonPackages.torchvision  # TODO: Access Denied - will retry
           customPythonPackages.torchaudio
 
           #####################################################################
@@ -304,8 +304,8 @@
           comfyui = finalImage;
           default = finalImage;
 
-          # Expose custom Python packages for debugging
-          inherit customPythonPackages pythonWithAllPackages;
+          # Expose Python environment for debugging
+          inherit pythonWithAllPackages;
         };
 
         # Apps for building layers incrementally
