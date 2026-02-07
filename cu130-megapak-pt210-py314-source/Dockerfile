@@ -17,6 +17,38 @@ ARG PYTHON_VERSION=3.14.0
 # NVIDIA CUDA devel
 # Ref: https://gitlab.com/nvidia/container-images/cuda/
 
+# Helper function for retry logic on network failures
+RUN printf '#!/bin/bash\n\
+zypper_retry() {\n\
+    local max_attempts=5\n\
+    local timeout=2\n\
+    local attempt=1\n\
+    local exitCode=0\n\
+    \n\
+    while (( attempt <= max_attempts )); do\n\
+        echo "Attempt $attempt of $max_attempts: zypper $@"\n\
+        if zypper "$@"; then\n\
+            echo "zypper command succeeded on attempt $attempt"\n\
+            return 0\n\
+        else\n\
+            exitCode=$?\n\
+            echo "zypper command failed with exit code $exitCode on attempt $attempt"\n\
+            \n\
+            if (( attempt < max_attempts )); then\n\
+                echo "Waiting ${timeout}s before retry..."\n\
+                sleep $timeout\n\
+                timeout=$((timeout * 2))\n\
+            fi\n\
+        fi\n\
+        attempt=$((attempt + 1))\n\
+    done\n\
+    \n\
+    echo "zypper command failed after $max_attempts attempts"\n\
+    return $exitCode\n\
+}\n\
+zypper_retry "$@"\n' > /usr/local/bin/zypper-retry \
+    && chmod +x /usr/local/bin/zypper-retry
+
 RUN --mount=type=cache,target=/var/cache/zypp \
     zypper update --no-confirm
 
@@ -29,7 +61,7 @@ enabled=1\n\
 gpgcheck=1\n\
 gpgkey=https://developer.download.nvidia.com/compute/cuda/repos/opensuse15/x86_64/D42D0685.pub\n" \
         > /etc/zypp/repos.d/cuda-opensuse15.repo \
-    && zypper --verbose --gpg-auto-import-keys \
+    && zypper-retry --verbose --gpg-auto-import-keys \
         install --no-confirm --no-recommends --auto-agree-with-licenses \
 cuda-cccl-13-0 \
 cuda-command-line-tools-13-0 \
@@ -41,17 +73,17 @@ cuda-nvcc-13-0 \
 cuda-nvtx-13-0
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --verbose --gpg-auto-import-keys \
+    zypper-retry --verbose --gpg-auto-import-keys \
         install --no-confirm --no-recommends --auto-agree-with-licenses \
 libcublas-13-0
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --verbose --gpg-auto-import-keys \
+    zypper-retry --verbose --gpg-auto-import-keys \
         install --no-confirm --no-recommends --auto-agree-with-licenses \
 libcublas-devel-13-0
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --verbose --gpg-auto-import-keys \
+    zypper-retry --verbose --gpg-auto-import-keys \
         install --no-confirm --no-recommends --auto-agree-with-licenses \
 cuda-ctadvisor-13-0 \
 cuda-cudart-devel-13-0 \
@@ -65,39 +97,39 @@ libnvptxcompiler-13-0 \
 libnvvm-13-0
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --verbose --gpg-auto-import-keys \
+    zypper-retry --verbose --gpg-auto-import-keys \
         install --no-confirm --no-recommends --auto-agree-with-licenses \
 libcusolver-13-0 \
 libcusolver-devel-13-0
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --verbose --gpg-auto-import-keys \
+    zypper-retry --verbose --gpg-auto-import-keys \
         install --no-confirm --no-recommends --auto-agree-with-licenses \
 libcusparse-13-0 \
 libcusparse-devel-13-0
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --verbose --gpg-auto-import-keys \
+    zypper-retry --verbose --gpg-auto-import-keys \
         install --no-confirm --no-recommends --auto-agree-with-licenses \
 cuda-libraries-13-0
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --verbose --gpg-auto-import-keys \
+    zypper-retry --verbose --gpg-auto-import-keys \
         install --no-confirm --no-recommends --auto-agree-with-licenses \
 cuda-libraries-devel-13-0
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --verbose --gpg-auto-import-keys \
+    zypper-retry --verbose --gpg-auto-import-keys \
         install --no-confirm --no-recommends --auto-agree-with-licenses \
 cusparselt-cuda-13
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --verbose --gpg-auto-import-keys \
+    zypper-retry --verbose --gpg-auto-import-keys \
         install --no-confirm --no-recommends --auto-agree-with-licenses \
 libcudnn9-cuda-13-9.16.0.29-1
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --verbose --gpg-auto-import-keys \
+    zypper-retry --verbose --gpg-auto-import-keys \
         install --no-confirm --no-recommends --auto-agree-with-licenses \
 cudnn9-cuda-13-0
 
