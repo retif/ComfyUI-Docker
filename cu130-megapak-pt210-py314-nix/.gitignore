@@ -1,0 +1,18 @@
+# Nix build outputs
+result
+result-*
+
+# Nix garbage collection roots
+.direnv/
+
+# Development outputs
+output/
+*.tar.gz
+*.tar
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
