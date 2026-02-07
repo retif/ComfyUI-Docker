@@ -270,9 +270,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install \
         -r /builder-scripts/pak3.txt
 
+# TEMPORARILY DISABLED: No wheels available for Python 3.14 yet
+# Will re-enable when cupy-cuda13x releases Python 3.14 wheels
 # Install CuPy RC version with Python 3.14 support
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install cupy-cuda13x --pre -U -f https://pip.cupy.dev/pre
+# RUN --mount=type=cache,target=/root/.cache/pip \
+#     pip install cupy-cuda13x --pre -U -f https://pip.cupy.dev/pre
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install \
