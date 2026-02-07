@@ -132,7 +132,9 @@
         #########################################################################
         # Layer 4: ComfyUI Python dependencies
         #########################################################################
-        dependenciesLayer = pkgs.dockerTools.buildImage {
+        dependenciesLayer = let
+          builderScripts = ./builder-scripts;
+        in pkgs.dockerTools.buildImage {
           name = "comfyui-deps";
           tag = "latest";
           fromImage = pytorchLayer;
@@ -149,14 +151,31 @@
 
           runAsRoot = ''
             #!${pkgs.runtimeShell}
-            # Copy requirement files
+            # Copy builder scripts
             mkdir -p /builder-scripts
+            cp -r ${builderScripts}/* /builder-scripts/
+            chmod +x /builder-scripts/*.sh
 
-            # Install Python dependencies
-            # Note: In actual build, copy pak*.txt files here
-            # ${python}/bin/pip install --no-cache-dir -r /builder-scripts/pak3.txt
-            # ${python}/bin/pip install --no-cache-dir -r /builder-scripts/pak5.txt
-            # ${python}/bin/pip install --no-cache-dir -r /builder-scripts/pak7.txt
+            # Install Python dependencies from pak files
+            ${python}/bin/pip install --no-cache-dir -r /builder-scripts/pak3.txt
+            ${python}/bin/pip install --no-cache-dir -r /builder-scripts/pak5.txt
+            ${python}/bin/pip install --no-cache-dir -r /builder-scripts/pak7.txt
+
+            # Install SAM-2 (prevent CUDA package conflicts)
+            cd /builder-scripts
+            ${pkgs.git}/bin/git clone https://github.com/facebookresearch/sam2.git
+            cd sam2
+            SAM2_BUILD_CUDA=1 ${python}/bin/pip install --no-cache-dir \
+              -e . --no-deps --no-build-isolation
+            cd /
+
+            # Install SAM-3 (prevent NumPy1 conflicts)
+            cd /builder-scripts
+            ${pkgs.git}/bin/git clone https://github.com/facebookresearch/sam3.git
+            cd sam3
+            ${python}/bin/pip install --no-cache-dir \
+              -e . --no-deps --no-build-isolation
+            cd /
           '';
         };
 
@@ -192,24 +211,29 @@
 
           runAsRoot = ''
             #!${pkgs.runtimeShell}
-            # Clone and setup ComfyUI
+            # Clone and setup ComfyUI using preload script
             mkdir -p /default-comfyui-bundle
             cd /default-comfyui-bundle
 
-            # Note: In actual build, run preload-cache.sh here
-            # bash /builder-scripts/preload-cache.sh
+            # Run the preload cache script to install ComfyUI + custom nodes
+            ${pkgs.bash}/bin/bash /builder-scripts/preload-cache.sh
 
-            # Install ComfyUI requirements
-            # ${python}/bin/pip install --no-cache-dir \
-            #   -r /default-comfyui-bundle/ComfyUI/requirements.txt \
-            #   -r /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt
+            # Install ComfyUI and Manager requirements
+            ${python}/bin/pip install --no-cache-dir \
+              -r /default-comfyui-bundle/ComfyUI/requirements.txt \
+              -r /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt
+
+            # List installed packages for verification
+            ${python}/bin/pip list
           '';
         };
 
         #########################################################################
         # Final Image: Complete ComfyUI with runtime config
         #########################################################################
-        finalImage = pkgs.dockerTools.streamLayeredImage {
+        finalImage = let
+          runnerScripts = ./runner-scripts;
+        in pkgs.dockerTools.streamLayeredImage {
           name = "comfyui-boot";
           tag = "cu130-megapak-py314-nix";
           fromImage = comfyuiLayer;
@@ -218,6 +242,13 @@
             name = "runtime-root";
             paths = [ pkgs.bash ];
           };
+
+          extraCommands = ''
+            # Copy runner scripts
+            mkdir -p runner-scripts
+            cp -r ${runnerScripts}/* runner-scripts/
+            chmod +x runner-scripts/*.sh
+          '';
 
           config = {
             Cmd = [ "${pkgs.bash}/bin/bash" "/runner-scripts/entrypoint.sh" ];
@@ -228,6 +259,7 @@
             Env = [
               "CLI_ARGS="
               "PYTHONUNBUFFERED=1"
+              "PATH=/usr/bin:/bin:${python}/bin"
             ];
             Volumes = {
               "/root" = {};
