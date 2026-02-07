@@ -18,7 +18,8 @@ cd /default-comfyui-bundle/ComfyUI
 git reset --hard "$(git tag | grep -e '^v' | sort -V | tail -1)"
 
 cd /default-comfyui-bundle/ComfyUI/custom_nodes
-gcs https://github.com/Comfy-Org/ComfyUI-Manager.git
+# Clone Manager with tags (no --no-tags) to enable proper version detection
+git clone --depth=1 --recurse-submodules --shallow-submodules https://github.com/Comfy-Org/ComfyUI-Manager.git
 
 # Force ComfyUI-Manager to use PIP instead of UV
 mkdir -p /default-comfyui-bundle/ComfyUI/user/__manager

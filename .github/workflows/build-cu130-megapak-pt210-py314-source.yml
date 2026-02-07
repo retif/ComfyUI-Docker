@@ -103,12 +103,12 @@ jobs:
           COMFYUI_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314-source bash -c "cd /default-comfyui-bundle/ComfyUI && git describe --tags --always" || echo "unknown")
           echo "comfyui_version=${COMFYUI_VERSION}" >> $GITHUB_OUTPUT
 
-          # Extract ComfyUI Manager version
-          MANAGER_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314-source bash -c "cd /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager && (git describe --tags 2>/dev/null || git tag --sort=-v:refname | head -1 || echo \"commit-\$(git rev-parse --short HEAD)\")" || echo "unknown")
+          # Extract ComfyUI Manager version (now cloned with tags)
+          MANAGER_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314-source bash -c "cd /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager && git config --global --add safe.directory /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager && (git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)" 2>/dev/null || echo "unknown")
           echo "manager_version=${MANAGER_VERSION}" >> $GITHUB_OUTPUT
 
-          # Extract Frontend version
-          FRONTEND_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314-source bash -c "cd /default-comfyui-bundle/ComfyUI/web && (git describe --tags 2>/dev/null || git tag --sort=-v:refname | head -1 || echo \"commit-\$(git rev-parse --short HEAD)\")" || echo "unknown")
+          # Extract Frontend version from pip package (web/ is just compiled output)
+          FRONTEND_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314-source pip show comfyui_frontend_package 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "unknown")
           echo "frontend_version=${FRONTEND_VERSION}" >> $GITHUB_OUTPUT
 
           # Count custom nodes
@@ -131,8 +131,9 @@ jobs:
           NUNCHAKU_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314-source pip show nunchaku 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
           echo "nunchaku_version=${NUNCHAKU_VERSION}" >> $GITHUB_OUTPUT
 
-          # Create version tag
-          VERSION_TAG="py${PYTHON_VERSION}-pt${PYTORCH_VERSION}-cu${CUDA_VERSION}-comfy${COMFYUI_VERSION}-src"
+          # Create version tag (CUDA version is already in PyTorch version)
+          VERSION_TAG="py${PYTHON_VERSION}-pt${PYTORCH_VERSION}-comfy${COMFYUI_VERSION}-src"
+          VERSION_TAG="${VERSION_TAG//+/-}"
           echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
 
           echo "Python: ${PYTHON_VERSION}"

@@ -34,7 +34,7 @@ transformers
 compel
 lark
 # For Frame Interpolation
-cupy-cuda13x==14.0.0rc1  # Minimum version with Python 3.14 support
+# cupy-cuda13x  # Installed separately with --pre flag (see Dockerfile)
 # For APISR
 fairscale
 # For DepthFM

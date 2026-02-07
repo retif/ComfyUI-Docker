@@ -10,14 +10,33 @@ let
 
   python = pkgs.python314;
 
-  # Import our custom packages
-  customPythonPackages = pkgs.callPackage ./python-packages.nix {
+  # Import our modular custom packages
+  pak3Packages = pkgs.callPackage ./pak3.nix {
+    inherit python;
+    pythonPackages = python.pkgs;
+    buildPythonPackage = python.pkgs.buildPythonPackage;
+    fetchurl = pkgs.fetchurl;
+  };
+
+  pak5Packages = pkgs.callPackage ./pak5.nix {
+    inherit python;
+    pythonPackages = python.pkgs;
+    buildPythonPackage = python.pkgs.buildPythonPackage;
+  };
+
+  pak7Packages = pkgs.callPackage ./pak7.nix {
     inherit python;
     pythonPackages = python.pkgs;
     buildPythonPackage = python.pkgs.buildPythonPackage;
     fetchFromGitHub = pkgs.fetchFromGitHub;
+  };
+
+  customPackages = pkgs.callPackage ./custom-packages.nix {
+    inherit python;
+    pythonPackages = python.pkgs;
+    buildPythonPackage = python.pkgs.buildPythonPackage;
     fetchurl = pkgs.fetchurl;
-    cudaPackages = pkgs.cudaPackages_13_0 or pkgs.cudaPackages_12;
+    cudaPackages = pkgs.cudaPackages_13_0;
   };
 
   # This is the same list as in flake.nix
@@ -26,27 +45,27 @@ let
     pip setuptools wheel packaging build
 
     # PyTorch
-    customPythonPackages.torch
+    customPackages.torch
     torchvision
-    customPythonPackages.torchaudio
+    customPackages.torchaudio
 
     # Performance
-    customPythonPackages.flash-attn
-    customPythonPackages.sageattention
-    customPythonPackages.nunchaku
-    customPythonPackages.cupy-cuda13x
+    customPackages.flash-attn
+    customPackages.sageattention
+    customPackages.nunchaku
+    customPackages.cupy-cuda13x
 
     # Git packages
-    customPythonPackages.clip
-    customPythonPackages.cozy-comfyui
-    customPythonPackages.cozy-comfy
-    customPythonPackages.cstr
-    customPythonPackages.ffmpy
-    customPythonPackages.img2texture
+    pak7Packages.clip
+    pak7Packages.cozy-comfyui
+    pak7Packages.cozy-comfy
+    pak7Packages.cstr
+    pak7Packages.ffmpy
+    pak7Packages.img2texture
 
     # Core ML
-    customPythonPackages.accelerate
-    customPythonPackages.diffusers
+    pak3Packages.accelerate
+    pak3Packages.diffusers
     huggingface-hub
     transformers
 
@@ -55,23 +74,23 @@ let
 
     # Computer vision
     opencv4
-    customPythonPackages.opencv-contrib-python
-    customPythonPackages.opencv-contrib-python-headless
-    customPythonPackages.kornia
+    pak3Packages.opencv-contrib-python
+    pak3Packages.opencv-contrib-python-headless
+    pak3Packages.kornia
 
     # ML utilities
-    customPythonPackages.timm
-    customPythonPackages.torchmetrics
-    customPythonPackages.compel
-    customPythonPackages.lark
-    customPythonPackages.spandrel
+    pak3Packages.timm
+    pak3Packages.torchmetrics
+    pak3Packages.compel
+    pak3Packages.lark
+    pak5Packages.spandrel
 
     # Data formats
     pyyaml omegaconf onnx
 
     # System utilities
     joblib psutil tqdm regex
-    customPythonPackages.nvidia-ml-py
+    pak3Packages.nvidia-ml-py
 
     # HTTP/networking
     aiohttp requests urllib3
@@ -83,9 +102,9 @@ let
     peft safetensors sentencepiece tokenizers
 
     # Utilities
-    customPythonPackages.addict
+    pak5Packages.addict
     cachetools chardet filelock
-    customPythonPackages.loguru
+    pak5Packages.loguru
     protobuf pydantic pydub rich toml typing-extensions
 
     # Version control
@@ -105,11 +124,11 @@ let
 
     # Face analysis
     dlib
-    customPythonPackages.facexlib
-    customPythonPackages.insightface
+    pak7Packages.facexlib
+    pak7Packages.insightface
 
     # Additional from python-packages.nix
-    customPythonPackages.ftfy
+    pak3Packages.ftfy
   ];
 
 in {

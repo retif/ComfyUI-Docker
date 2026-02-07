@@ -265,8 +265,13 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}\
 COPY builder-scripts/.  /builder-scripts/
 
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install \
+    pip install --upgrade pip setuptools wheel && \
+    pip install --only-binary opencv-python,opencv-python-headless,opencv-contrib-python,opencv-contrib-python-headless \
         -r /builder-scripts/pak3.txt
+
+# Install CuPy RC version with Python 3.14 support
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install cupy-cuda13x --pre -U -f https://pip.cupy.dev/pre
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install \

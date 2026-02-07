@@ -1,281 +1,185 @@
 #!/usr/bin/env bash
-# Unified hash filling script for python-packages.nix
-# Handles: PyTorch wheels, Git repos, and PyPI packages
-# Automatically updates python-packages.nix with all hashes
-
+# Unified hash filling script for modular Nix packages
+# Works with: pak3.nix, pak5.nix, pak7.nix, custom-packages.nix
 set -e
 
-TARGET_FILE="python-packages.nix"
-TEMP_HASHES="/tmp/all-hashes.txt"
-> "$TEMP_HASHES"
-
-echo "========================================================================"
-echo "Filling ALL Package Hashes for python-packages.nix"
-echo "========================================================================"
+echo "========================================"
+echo "Fill Package Hashes (Modular Structure)"
+echo "========================================"
 echo ""
 
-#############################################################################
-# SECTION 1: PyTorch Wheels (with URL encoding)
-#############################################################################
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "SECTION 1: PyTorch Wheels"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-
-declare -A pytorch_wheels=(
-    ["torch"]="https://download.pytorch.org/whl/cu130/torch-2.10.0%2Bcu130-cp314-cp314-manylinux_2_28_x86_64.whl|torch-2.10.0-cu130-cp314-cp314-manylinux_2_28_x86_64.whl"
-    ["torchvision"]="https://download.pytorch.org/whl/cu130/torchvision-0.20.0%2Bcu130-cp314-cp314-manylinux_2_28_x86_64.whl|torchvision-0.20.0-cu130-cp314-cp314-manylinux_2_28_x86_64.whl"
-    ["torchaudio"]="https://download.pytorch.org/whl/cu130/torchaudio-2.10.0%2Bcu130-cp314-cp314-manylinux_2_28_x86_64.whl|torchaudio-2.10.0-cu130-cp314-cp314-manylinux_2_28_x86_64.whl"
-)
-
-for package in "${!pytorch_wheels[@]}"; do
-    IFS='|' read -r url name <<< "${pytorch_wheels[$package]}"
-    echo "[$package]"
-    echo "  URL: $url"
-    echo "  Prefetching with name: $name"
-
-    hash=$(nix-prefetch-url --name "$name" "$url" 2>&1 | tail -1)
-
-    if [ ! -z "$hash" ] && [[ ! "$hash" =~ "error" ]]; then
-        echo "  ✅ sha256-$hash"
-        echo "$package:sha256-$hash" >> "$TEMP_HASHES"
+# Check if a file has any empty hashes
+check_empty_hashes() {
+    local file=$1
+    if grep -q 'sha256 = "";' "$file" 2>/dev/null; then
+        return 0  # Has empty hashes
     else
-        echo "  ❌ Failed (may be rate limited)"
-        echo "$package:FAILED" >> "$TEMP_HASHES"
+        return 1  # No empty hashes
     fi
-    echo ""
-done
+}
 
-#############################################################################
-# SECTION 2: Performance Wheels (flash-attn, sageattention, nunchaku)
-#############################################################################
+# Fill hashes for PyPI packages (fetchPypi)
+fill_pypi_hashes() {
+    local file=$1
+    echo -e "${YELLOW}Processing PyPI packages in $file...${NC}"
 
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "SECTION 2: Performance Wheels"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    # Find packages with fetchPypi and empty sha256
+    grep -B10 'sha256 = "";' "$file" | grep -E 'pname = |version = ' | while read -r line; do
+        if [[ $line =~ pname\ =\ \"([^\"]+)\" ]]; then
+            pname="${BASH_REMATCH[1]}"
+        elif [[ $line =~ version\ =\ \"([^\"]+)\" ]]; then
+            version="${BASH_REMATCH[1]}"
+
+            if [ -n "$pname" ] && [ -n "$version" ]; then
+                echo -e "  Fetching hash for ${GREEN}${pname}${NC} ${version}..."
+
+                # Use nix-prefetch-url to get the hash
+                hash=$(nix-prefetch-url "https://files.pythonhosted.org/packages/source/${pname:0:1}/${pname}/${pname}-${version}.tar.gz" 2>/dev/null || echo "")
+
+                if [ -n "$hash" ]; then
+                    # Update the file (find the package block and replace empty sha256)
+                    sed -i "/pname = \"${pname}\"/,/sha256 = \"\";/{s|sha256 = \"\";|sha256 = \"${hash}\";|}" "$file"
+                    echo -e "    ${GREEN}✓${NC} Updated hash: ${hash}"
+                else
+                    echo -e "    ${RED}✗${NC} Failed to fetch hash"
+                fi
+
+                pname=""
+                version=""
+            fi
+        fi
+    done
+}
+
+# Fill hashes for wheel packages (fetchurl with .whl)
+fill_wheel_hashes() {
+    local file=$1
+    echo -e "${YELLOW}Processing wheel packages in $file...${NC}"
+
+    # Find packages with fetchurl (wheels) and empty sha256
+    grep -B5 'sha256 = "";' "$file" | grep 'url = ' | while read -r line; do
+        if [[ $line =~ url\ =\ \"([^\"]+)\" ]]; then
+            url="${BASH_REMATCH[1]}"
+
+            # Extract package name from URL
+            if [[ $url =~ ([^/]+)\.whl ]]; then
+                wheel_name="${BASH_REMATCH[1]}"
+                echo -e "  Fetching hash for ${GREEN}${wheel_name}.whl${NC}..."
+
+                # Use nix-prefetch-url to get the hash
+                hash=$(nix-prefetch-url "$url" 2>/dev/null || echo "")
+
+                if [ -n "$hash" ]; then
+                    # Update the file - replace the empty sha256 after this URL
+                    # Use perl for more precise replacement
+                    perl -i -pe "BEGIN{undef $/;} s|(url = \"${url//./\\.}\".*?)sha256 = \"\";|\1sha256 = \"${hash}\";|sm" "$file"
+                    echo -e "    ${GREEN}✓${NC} Updated hash: ${hash}"
+                else
+                    echo -e "    ${RED}✗${NC} Failed to fetch hash"
+                fi
+            fi
+        fi
+    done
+}
+
+# Fill hashes for git packages (fetchFromGitHub)
+fill_git_hashes() {
+    local file=$1
+    echo -e "${YELLOW}Processing git packages in $file...${NC}"
+
+    # Find packages with fetchFromGitHub and empty sha256
+    local in_fetch=false
+    local owner=""
+    local repo=""
+    local rev=""
+
+    while IFS= read -r line; do
+        if [[ $line =~ fetchFromGitHub ]]; then
+            in_fetch=true
+            owner=""
+            repo=""
+            rev=""
+        elif [[ $in_fetch == true ]]; then
+            if [[ $line =~ owner\ =\ \"([^\"]+)\" ]]; then
+                owner="${BASH_REMATCH[1]}"
+            elif [[ $line =~ repo\ =\ \"([^\"]+)\" ]]; then
+                repo="${BASH_REMATCH[1]}"
+            elif [[ $line =~ rev\ =\ \"([^\"]+)\" ]]; then
+                rev="${BASH_REMATCH[1]}"
+            elif [[ $line =~ sha256\ =\ \"\" ]]; then
+                if [ -n "$owner" ] && [ -n "$repo" ] && [ -n "$rev" ]; then
+                    echo -e "  Fetching hash for ${GREEN}${owner}/${repo}${NC} @ ${rev}..."
+
+                    # Use nix-prefetch-git
+                    hash=$(nix-prefetch-git --url "https://github.com/${owner}/${repo}" --rev "$rev" --quiet 2>/dev/null | jq -r '.sha256' || echo "")
+
+                    if [ -n "$hash" ] && [ "$hash" != "null" ]; then
+                        # Update the file
+                        perl -i -pe "BEGIN{undef $/;} s|(owner = \"${owner}\".*?repo = \"${repo}\".*?rev = \"${rev}\".*?)sha256 = \"\";|\1sha256 = \"${hash}\";|sm" "$file"
+                        echo -e "    ${GREEN}✓${NC} Updated hash: ${hash}"
+                    else
+                        echo -e "    ${RED}✗${NC} Failed to fetch hash"
+                    fi
+                fi
+                in_fetch=false
+            fi
+        fi
+    done < "$file"
+}
+
+# Main processing
+echo "Checking for empty hashes in modular files..."
 echo ""
 
-declare -A perf_wheels=(
-    ["flash-attn"]="https://github.com/Dao-AILab/flash-attention/releases/download/v2.7.3/flash_attn-2.7.3%2Bcu12torch2.5.1cxx11abiFALSE-cp314-cp314-linux_x86_64.whl|flash_attn-2.7.3-cu12torch2.5.1cxx11abiFALSE-cp314-cp314-linux_x86_64.whl"
-    ["sageattention"]="https://github.com/thu-ml/SageAttention/releases/download/v2.1.0/sageattention-2.1.0%2Bcu124torch2.5.1-cp314-cp314-linux_x86_64.whl|sageattention-2.1.0-cu124torch2.5.1-cp314-cp314-linux_x86_64.whl"
-    ["nunchaku"]="https://github.com/chengzeyi/nunchaku/releases/download/v0.3.3/nunchaku-0.3.3%2Bcu124torch2.5.1-cp314-cp314-linux_x86_64.whl|nunchaku-0.3.3-cu124torch2.5.1-cp314-cp314-linux_x86_64.whl"
-    ["cupy-cuda13x"]="https://github.com/cupy/cupy/releases/download/v14.0.0rc1/cupy_cuda13x-14.0.0rc1-cp314-cp314-manylinux2014_x86_64.whl|cupy_cuda13x-14.0.0rc1-cp314-cp314-manylinux2014_x86_64.whl"
-)
+files=("pak3.nix" "pak5.nix" "pak7.nix" "custom-packages.nix")
+updated_any=false
 
-for package in "${!perf_wheels[@]}"; do
-    IFS='|' read -r url name <<< "${perf_wheels[$package]}"
-    echo "[$package]"
-    echo "  URL: $url"
-    echo "  Prefetching with name: $name"
-
-    hash=$(nix-prefetch-url --name "$name" "$url" 2>&1 | tail -1)
-
-    if [ ! -z "$hash" ] && [[ ! "$hash" =~ "error" ]]; then
-        echo "  ✅ sha256-$hash"
-        echo "$package:sha256-$hash" >> "$TEMP_HASHES"
-    else
-        echo "  ❌ Failed"
-        echo "$package:FAILED" >> "$TEMP_HASHES"
-    fi
-    echo ""
-done
-
-#############################################################################
-# SECTION 3: Git Repositories
-#############################################################################
-
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "SECTION 3: Git Repositories"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-
-declare -A git_repos=(
-    ["clip"]="https://github.com/openai/CLIP.git|a1d071733d7111c9c014f024669f959182114e33"
-    ["cozy-comfyui"]="https://github.com/cozy-creator/cozy-comfyui.git|d3bb7ecabdad68dc21bf0b4913b4c4ac3d3b862b"
-    ["cozy-comfy"]="https://github.com/cozy-creator/gen-server.git|bb7bb2c5d29b6c3867cbe8b4ec4b29e2ce5a4ea0"
-    ["cstr"]="https://github.com/ControlNet/CSTR.git|1a222b76db20b7494e0cf1de2e5ec3d4ee33ddd5"
-    ["ffmpy"]="https://github.com/Ch00k/ffmpy.git|c5ea74a28e3f8d36da720028c70bb60b3c46e83f"
-    ["img2texture"]="https://github.com/Artiprocher/img2texture.git|f2ceb34656bf1fb01e0f80b8f4cb26d659de6c18"
-)
-
-for package in "${!git_repos[@]}"; do
-    IFS='|' read -r url rev <<< "${git_repos[$package]}"
-    echo "[$package]"
-    echo "  URL: $url"
-    echo "  Rev: $rev"
-    echo "  Prefetching..."
-
-    hash=$(nix-prefetch-git --url "$url" --rev "$rev" 2>&1 | grep '"sha256"' | cut -d'"' -f4)
-
-    if [ ! -z "$hash" ]; then
-        echo "  ✅ sha256-$hash"
-        echo "$package:sha256-$hash" >> "$TEMP_HASHES"
-    else
-        echo "  ❌ Failed"
-        echo "$package:FAILED" >> "$TEMP_HASHES"
-    fi
-    echo ""
-done
-
-#############################################################################
-# SECTION 4: PyPI Packages
-#############################################################################
-
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "SECTION 4: PyPI Packages"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-
-declare -A pypi_packages=(
-    ["ftfy"]="6.3.1"
-    ["nvidia-ml-py"]="12.560.30"
-    ["opencv-contrib-python"]="4.10.0.84"
-    ["opencv-contrib-python-headless"]="4.10.0.84"
-    ["timm"]="1.0.17"
-    ["accelerate"]="1.2.1"
-    ["diffusers"]="0.31.0"
-    ["torchmetrics"]="1.6.0"
-    ["kornia"]="0.7.4"
-    ["compel"]="2.0.3"
-    ["lark"]="1.2.2"
-    ["spandrel"]="0.4.0"
-    ["insightface"]="0.7.3"
-    ["facexlib"]="0.3.0"
-    ["addict"]="2.4.0"
-    ["loguru"]="0.7.3"
-)
-
-for package in "${!pypi_packages[@]}"; do
-    version="${pypi_packages[$package]}"
-    echo "[$package v$version]"
-    echo "  Querying PyPI API..."
-
-    api_url="https://pypi.org/pypi/$package/$version/json"
-    download_url=$(curl -sL "$api_url" 2>/dev/null | \
-        jq -r '.urls[] | select(.packagetype=="bdist_wheel" or .packagetype=="sdist") | .url' | \
-        head -1)
-
-    if [ -z "$download_url" ]; then
-        echo "  ❌ Failed to get download URL from PyPI"
-        echo "$package:FAILED" >> "$TEMP_HASHES"
-        echo ""
+for file in "${files[@]}"; do
+    if [ ! -f "$file" ]; then
+        echo -e "${RED}✗ $file not found${NC}"
         continue
     fi
 
-    echo "  URL: $download_url"
-    echo "  Prefetching..."
-
-    hash=$(nix-prefetch-url "$download_url" 2>&1 | tail -1)
-
-    if [ ! -z "$hash" ] && [[ ! "$hash" =~ "error" ]]; then
-        echo "  ✅ sha256-$hash"
-        echo "$package:sha256-$hash" >> "$TEMP_HASHES"
-    else
-        echo "  ❌ Failed to prefetch"
-        echo "$package:FAILED" >> "$TEMP_HASHES"
-    fi
-    echo ""
-done
-
-#############################################################################
-# SECTION 5: Update python-packages.nix
-#############################################################################
-
-echo "========================================================================"
-echo "Hash Collection Complete - Updating $TARGET_FILE"
-echo "========================================================================"
-echo ""
-
-# Count results
-successes=$(grep -c -v "FAILED" "$TEMP_HASHES" || echo "0")
-total=$(wc -l < "$TEMP_HASHES")
-
-echo "Prefetched: $successes/$total packages"
-echo ""
-
-if [ ! -f "$TARGET_FILE" ]; then
-    echo "❌ Error: $TARGET_FILE not found"
-    exit 1
-fi
-
-# Create backup
-cp "$TARGET_FILE" "${TARGET_FILE}.backup"
-echo "Created backup: ${TARGET_FILE}.backup"
-echo ""
-
-# Update hashes in python-packages.nix
-echo "Updating hashes in $TARGET_FILE..."
-echo ""
-
-updated_count=0
-while IFS=: read -r package hash; do
-    if [[ "$hash" == "FAILED" ]]; then
-        echo "  ⏭️  Skipping $package (failed to prefetch)"
+    if ! check_empty_hashes "$file"; then
+        echo -e "${GREEN}✓ $file - All hashes filled${NC}"
         continue
     fi
 
-    # Remove "sha256-" prefix if present (nix-prefetch-url returns base32 hash)
-    hash_plain="${hash#sha256-}"
-
-    # Different sed patterns for different package types
-    case "$package" in
-        torch|torchvision|torchaudio|flash-attn|sageattention|nunchaku|cupy-cuda13x)
-            # For wheel packages: look for sha256 = "..."
-            if sed -i "/$package = buildWheel {/,/};/s|sha256 = \".*\";|sha256 = \"$hash_plain\";|" "$TARGET_FILE" 2>/dev/null; then
-                echo "  ✅ Updated $package"
-                ((updated_count++))
-            else
-                echo "  ⚠️  Could not update $package (pattern not found)"
-            fi
-            ;;
-        clip|cozy-comfyui|cozy-comfy|cstr|ffmpy|img2texture)
-            # For git packages: look for sha256 = "..."
-            if sed -i "/$package = buildFromGit {/,/};/s|sha256 = \".*\";|sha256 = \"$hash_plain\";|" "$TARGET_FILE" 2>/dev/null; then
-                echo "  ✅ Updated $package"
-                ((updated_count++))
-            else
-                echo "  ⚠️  Could not update $package (pattern not found)"
-            fi
-            ;;
-        *)
-            # For PyPI packages: look for sha256 = "..."
-            if sed -i "/$package = pythonPackages.buildPythonPackage/,/};/s|sha256 = \".*\";|sha256 = \"$hash_plain\";|" "$TARGET_FILE" 2>/dev/null; then
-                echo "  ✅ Updated $package"
-                ((updated_count++))
-            else
-                echo "  ⚠️  Could not update $package (pattern not found)"
-            fi
-            ;;
-    esac
-done < "$TEMP_HASHES"
-
-echo ""
-echo "========================================================================"
-echo "Summary"
-echo "========================================================================"
-echo ""
-echo "Prefetched hashes: $successes/$total"
-echo "Updated in file: $updated_count"
-echo ""
-
-# Verify no placeholders remain
-remaining=$(grep -c "lib.fakeSha256\|fakeSha256" "$TARGET_FILE" || echo "0")
-echo "Remaining placeholders: $remaining"
-echo ""
-
-if [ "$remaining" -eq 0 ]; then
-    echo "✅ All hashes filled successfully!"
+    echo -e "${YELLOW}○ $file - Has empty hashes, processing...${NC}"
     echo ""
-    echo "Next steps:"
-    echo "  1. Review changes: git diff $TARGET_FILE"
-    echo "  2. Test build: nix flake check"
-    echo "  3. Build Python env: nix build .#pythonWithAllPackages"
+
+    # Try to fill different types of packages
+    fill_pypi_hashes "$file"
+    fill_wheel_hashes "$file"
+    fill_git_hashes "$file"
+
+    echo ""
+    updated_any=true
+done
+
+echo "========================================"
+if [ "$updated_any" = true ]; then
+    echo -e "${GREEN}Hash filling complete!${NC}"
+    echo ""
+    echo "Verification:"
+    for file in "${files[@]}"; do
+        if [ -f "$file" ]; then
+            empty_count=$(grep -c 'sha256 = "";' "$file" 2>/dev/null || echo "0")
+            filled_count=$(grep -c 'sha256 = "' "$file" 2>/dev/null || echo "0")
+            if [ "$empty_count" -eq 0 ]; then
+                echo -e "  ${GREEN}✓${NC} $file: $filled_count hashes filled, 0 empty"
+            else
+                echo -e "  ${YELLOW}○${NC} $file: $filled_count hashes filled, $empty_count empty"
+            fi
+        fi
+    done
 else
-    echo "⚠️  Some placeholders remain - manual intervention may be needed"
+    echo -e "${GREEN}All hashes already filled!${NC}"
 fi
-
-echo ""
-echo "Backup saved at: ${TARGET_FILE}.backup"
-echo "Hash collection log: $TEMP_HASHES"
-echo ""
+echo "========================================"
