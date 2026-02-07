@@ -102,7 +102,7 @@ jobs:
         run: |
           echo "Building Layer 0: Base + CUDA..."
           nix build .#layer0-base --print-build-logs
-          docker load < result
+          ./result | docker load
           docker tag comfyui-layer0-base:cuda130 \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer0-base-cuda130
           docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer0-base-cuda130
@@ -120,7 +120,7 @@ jobs:
         run: |
           echo "Building Layer 1: Python + nixpkgs..."
           nix build .#layer1-python --print-build-logs
-          docker load < result
+          ./result | docker load
           docker tag comfyui-layer1-python:py314 \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer1-python-py314
           docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer1-python-py314
@@ -138,7 +138,7 @@ jobs:
         run: |
           echo "Building Layer 2: Downloaded wheels..."
           nix build .#layer2-wheels --print-build-logs
-          docker load < result
+          ./result | docker load
           docker tag comfyui-layer2-wheels:latest \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer2-wheels
           docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer2-wheels
@@ -156,7 +156,7 @@ jobs:
         run: |
           echo "Building Layer 3: PyTorch..."
           nix build .#layer3-pytorch --print-build-logs
-          docker load < result
+          ./result | docker load
           docker tag comfyui-layer3-pytorch:cu130 \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer3-pytorch-cu130
           docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer3-pytorch-cu130
@@ -174,7 +174,7 @@ jobs:
         run: |
           echo "Building Layer 4: Dependencies..."
           nix build .#layer4-deps --print-build-logs
-          docker load < result
+          ./result | docker load
           docker tag comfyui-layer4-deps:latest \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer4-deps
           docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer4-deps
@@ -192,7 +192,7 @@ jobs:
         run: |
           echo "Building Layer 5: Performance wheels..."
           nix build .#layer5-perf --print-build-logs
-          docker load < result
+          ./result | docker load
           docker tag comfyui-layer5-perf:latest \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer5-perf
           docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer5-perf
@@ -204,7 +204,7 @@ jobs:
         run: |
           echo "Building Layer 6: ComfyUI app..."
           nix build .#layer6-app --print-build-logs
-          docker load < result
+          ./result | docker load
           docker tag comfyui-layer6-app:latest \
             ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer6-app
           docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer6-app
