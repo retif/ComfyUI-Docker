@@ -14,7 +14,7 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-slim  # Lighter runner, uses containers instead of VMs
-    timeout-minutes: 120  # Large Nix builds can take time (default for ubuntu-slim is only 15m)
+    timeout-minutes: 360  # Maximum timeout (6 hours) - large Nix builds need time
     permissions:
       contents: read
       packages: write
@@ -35,16 +35,8 @@ jobs:
           docker-images: true
           swap-storage: false  # Keep swap for large builds
 
-      # ✅ More aggressive disk space optimization
-      - name: Maximize build space
-        uses: easimon/maximize-build-space@master
-        with:
-          remove-dotnet: 'true'
-          remove-android: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
-
       # ✅ Nix-specific optimization (removes everything except Nix)
+      # Note: easimon/maximize-build-space doesn't work on ubuntu-slim (needs loop devices + LVM)
       - name: Nothing but Nix
         uses: wimpysworld/nothing-but-nix@main
 
