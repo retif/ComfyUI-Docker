@@ -153,7 +153,6 @@ sqlite3-devel \
 zlib-devel \
 libreadline8 \
 readline-devel \
-libgdbm-dev6 \
 gdbm-devel \
 libuuid-devel \
 tk-devel \
