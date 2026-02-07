@@ -41,7 +41,7 @@
           # PYTORCH (from custom packages)
           #####################################################################
           customPythonPackages.torch
-          # customPythonPackages.torchvision  # TODO: Access Denied - will retry
+          torchvision  # Using nixpkgs version (custom wheel has Access Denied)
           customPythonPackages.torchaudio
 
           #####################################################################
@@ -97,8 +97,8 @@
           # Data formats
           pyyaml
           omegaconf
-          # onnx  # TODO: check if available
-          # onnxruntime  # Note: need GPU version
+          onnx
+          # onnxruntime  # Note: need GPU version - TODO: check onnxruntime-gpu
 
           # System utilities
           joblib
@@ -116,14 +116,14 @@
           urllib3
 
           # Data processing
-          # albumentations  # TODO: check if available
-          # av  # TODO: check if available
+          albumentations
+          av
           einops
           numba
           numexpr
 
           # ML/AI tools
-          # peft  # TODO: check if available
+          peft
           safetensors
           sentencepiece
           tokenizers
@@ -136,7 +136,7 @@
           customPythonPackages.loguru
           protobuf
           pydantic
-          # pydub  # TODO: check if available
+          pydub
           rich
           toml
           typing-extensions
@@ -150,7 +150,7 @@
           #####################################################################
           # PACKAGES FROM PAK7 (face analysis and utilities)
           #####################################################################
-          # dlib  # TODO: check if available in nixpkgs
+          dlib
           customPythonPackages.facexlib
           customPythonPackages.insightface
 
