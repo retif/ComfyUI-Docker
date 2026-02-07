@@ -1,26 +1,14 @@
 {
-  description = "ComfyUI Docker - Pure Nix build with layered architecture";
+  description = "ComfyUI Docker - Pure Nix build with nix2container (zero duplication)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-
-    # Layer inputs
-    layer01.url = "path:./layers/01-base-cuda";
-    layer02.url = "path:./layers/02-python-tools";
-    layer03.url = "path:./layers/03-gcc15";
-    layer04.url = "path:./layers/04-pytorch";
-    layer05.url = "path:./layers/05-pak3";
-    layer06.url = "path:./layers/06-cupy";
-    layer07.url = "path:./layers/07-pak5";
-    layer08.url = "path:./layers/08-pak7";
-    layer09.url = "path:./layers/09-sam";
-    layer10.url = "path:./layers/10-performance";
-    layer11.url = "path:./layers/11-app";
-    layer12.url = "path:./layers/12-comfyui";
+    nix2container.url = "github:nlewo/nix2container";
+    nix2container.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils, layer01, layer02, layer03, layer04, layer05, layer06, layer07, layer08, layer09, layer10, layer11, layer12 }:
+  outputs = { self, nixpkgs, flake-utils, nix2container }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -30,6 +18,8 @@
             cudaSupport = true;
           };
         };
+
+        nix2containerPkgs = nix2container.packages.${system};
 
         python = pkgs.python314;
         cudaPackages = pkgs.cudaPackages_13_0;
@@ -70,121 +60,318 @@
           inherit pak3Packages pak5Packages pak7Packages;
         };
 
-        # Python environment with all packages (for testing)
-        pythonWithAllPackages = python.withPackages (ps: packageList.all);
+        # Helper function to chain layers and avoid duplication
+        # Based on: https://blog.eigenvalue.net/2023-nix2container-everything-once/
+        foldImageLayers = let
+          mergeToLayer = priorLayers: component:
+            assert builtins.isList priorLayers;
+            assert builtins.isAttrs component;
+            let
+              layer = nix2containerPkgs.nix2container.buildLayer (component // {
+                layers = priorLayers;
+              });
+            in
+            priorLayers ++ [ layer ];
+        in
+        layers: builtins.foldl' mergeToLayer [] layers;
+
+        # Layer definitions (explicit, logical grouping)
+        layerDefs = [
+          # Layer 01: Base system utilities
+          {
+            deps = with pkgs; [
+              bash
+              coreutils
+              findutils
+              gnugrep
+              gnused
+              gnutar
+              gzip
+              bzip2
+              xz
+              which
+            ];
+          }
+
+          # Layer 02: CUDA Toolkit + cuDNN
+          {
+            deps = [
+              cudaPackages.cudatoolkit
+              cudaPackages.cudnn
+            ];
+          }
+
+          # Layer 03: Build tools and media libraries
+          {
+            deps = with pkgs; [
+              gcc
+              cmake
+              ninja
+              git
+              ffmpeg
+              x264
+              x265
+            ];
+          }
+
+          # Layer 04: Python 3.14 base
+          {
+            deps = [ python ];
+          }
+
+          # Layer 05: GCC 15
+          {
+            deps = with pkgs; [
+              gcc15
+              binutils
+            ];
+          }
+
+          # Layer 06: PyTorch ecosystem
+          {
+            deps = with python.pkgs; [
+              customPackages.torch
+              torchvision
+              customPackages.torchaudio
+            ];
+          }
+
+          # Layer 07: pak3 - Core ML packages
+          {
+            deps = with python.pkgs; [
+              # Build tools
+              pip setuptools wheel packaging build
+
+              # Core ML frameworks (custom packages)
+              pak3Packages.accelerate
+              pak3Packages.diffusers
+
+              # Core ML frameworks (from nixpkgs)
+              huggingface-hub
+              transformers
+
+              # Scientific computing
+              numpy scipy pillow imageio scikit-learn scikit-image matplotlib pandas seaborn
+
+              # Computer vision
+              opencv4
+              pak3Packages.opencv-contrib-python
+              pak3Packages.opencv-contrib-python-headless
+              pak3Packages.kornia
+
+              # ML utilities (custom packages)
+              pak3Packages.timm
+              pak3Packages.torchmetrics
+              pak3Packages.compel
+              pak3Packages.lark
+
+              # Data formats
+              pyyaml omegaconf onnx onnxruntime
+
+              # System utilities
+              joblib psutil tqdm regex einops
+              pak3Packages.nvidia-ml-py
+              pak3Packages.ftfy
+            ];
+          }
+
+          # Layer 08: CuPy
+          {
+            deps = [ customPackages.cupy-cuda13x ];
+          }
+
+          # Layer 09: pak5 - Extended libraries
+          {
+            deps = with python.pkgs; [
+              # Custom packages
+              pak5Packages.addict
+              pak5Packages.loguru
+              pak5Packages.spandrel
+
+              # HTTP/networking
+              aiohttp requests urllib3
+
+              # Data processing
+              albumentations av numba numexpr
+
+              # ML/AI tools
+              peft safetensors sentencepiece tokenizers
+
+              # Utilities
+              protobuf pydantic rich sqlalchemy
+
+              # Geometry
+              shapely trimesh
+
+              # Additional
+              webcolors qrcode yarl tomli pycocotools
+            ];
+          }
+
+          # Layer 10: pak7 - Face analysis + Git packages
+          {
+            deps = [
+              # Face analysis
+              python.pkgs.dlib
+              pak7Packages.facexlib
+              pak7Packages.insightface
+
+              # Git packages
+              pak7Packages.clip
+              pak7Packages.cozy-comfyui
+              pak7Packages.cozy-comfy
+              pak7Packages.cstr
+              pak7Packages.ffmpy
+              pak7Packages.img2texture
+            ];
+          }
+
+          # Layer 11: Performance libraries
+          {
+            deps = [
+              customPackages.flash-attn
+              customPackages.sageattention
+              customPackages.nunchaku
+            ];
+          }
+
+          # Layer 12: Application scripts and utilities
+          {
+            deps = with pkgs; [
+              aria2
+              vim
+              fish
+            ];
+          }
+        ];
+
+        # Build all layers with automatic deduplication
+        imageLayers = foldImageLayers layerDefs;
+
+        # Application scripts to copy to root
+        builderScripts = pkgs.runCommand "builder-scripts" {} ''
+          mkdir -p $out/builder-scripts
+          echo "#!/bin/bash" > $out/builder-scripts/placeholder.sh
+          echo "echo 'Builder scripts placeholder'" >> $out/builder-scripts/placeholder.sh
+          chmod +x $out/builder-scripts/placeholder.sh
+        '';
+
+        runnerScripts = pkgs.runCommand "runner-scripts" {} ''
+          mkdir -p $out/runner-scripts
+          cat > $out/runner-scripts/entrypoint.sh << 'EOF'
+          #!/bin/bash
+          set -e
+
+          echo "ComfyUI Container (Nix2Container)"
+          echo "Python: $(python --version)"
+          echo "PyTorch: $(python -c 'import torch; print(torch.__version__)')"
+          echo "CUDA: $(python -c 'import torch; print(torch.version.cuda)')"
+
+          exec "$@"
+          EOF
+          chmod +x $out/runner-scripts/entrypoint.sh
+        '';
+
+        # Final image with all layers
+        comfyuiImage = nix2containerPkgs.nix2container.buildImage {
+          name = "comfyui-boot";
+          tag = "cu130-megapak-py314-nix-nix2container";
+
+          # Use all pre-built layers
+          layers = imageLayers;
+
+          # Copy application scripts to root
+          copyToRoot = [
+            builderScripts
+            runnerScripts
+          ];
+
+          # Image configuration
+          config = {
+            Cmd = [ "${pkgs.bash}/bin/bash" "/runner-scripts/entrypoint.sh" ];
+            WorkingDir = "/root";
+            ExposedPorts = {
+              "8188/tcp" = {};
+            };
+            Env = [
+              "PATH=/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+              "PYTHONPATH=${python.withPackages (ps: packageList.all)}/lib/python3.14/site-packages"
+              "CUDA_HOME=${cudaPackages.cudatoolkit}"
+              "LD_LIBRARY_PATH=${cudaPackages.cudatoolkit}/lib:${cudaPackages.cudnn}/lib"
+              "CC=${pkgs.gcc15}/bin/gcc"
+              "CXX=${pkgs.gcc15}/bin/g++"
+              "CPP=${pkgs.gcc15}/bin/cpp"
+            ];
+          };
+        };
 
       in {
         packages = {
-          # Individual layers
-          layer01-base-cuda = layer01.packages.${system}.default;
-          layer02-python-tools = layer02.packages.${system}.default;
-          layer03-gcc15 = layer03.packages.${system}.default;
-          layer04-pytorch = layer04.packages.${system}.default;
-          layer05-pak3 = layer05.packages.${system}.default;
-          layer06-cupy = layer06.packages.${system}.default;
-          layer07-pak5 = layer07.packages.${system}.default;
-          layer08-pak7 = layer08.packages.${system}.default;
-          layer09-sam = layer09.packages.${system}.default;
-          layer10-performance = layer10.packages.${system}.default;
-          layer11-app = layer11.packages.${system}.default;
-          layer12-comfyui = layer12.packages.${system}.default;
-
-          # Final image (default)
-          comfyui = layer12.packages.${system}.default;
-          default = layer12.packages.${system}.default;
+          # Main image
+          comfyui = comfyuiImage;
+          default = comfyuiImage;
 
           # Expose Python environment for debugging
-          inherit pythonWithAllPackages;
+          pythonWithAllPackages = python.withPackages (ps: packageList.all);
         };
 
-        # Apps for building layers
+        # Apps for building and testing
         apps = {
-          # Build all layers incrementally
-          build-all-layers = {
+          # Build and load image
+          build = {
             type = "app";
-            program = toString (pkgs.writeScript "build-all-layers" ''
+            program = toString (pkgs.writeScript "build-nix2container" ''
               #!${pkgs.bash}/bin/bash
               set -e
 
-              echo "Building Layer 01: Base + CUDA..."
-              nix build .#layer01-base-cuda
-              docker load < result
+              echo "Building ComfyUI image with nix2container..."
+              nix build .#comfyui --show-trace
 
-              echo "Building Layer 02: Python + Tools..."
-              nix build .#layer02-python-tools
-              docker load < result
-
-              echo "Building Layer 03: GCC 15..."
-              nix build .#layer03-gcc15
-              docker load < result
-
-              echo "Building Layer 04: PyTorch..."
-              nix build .#layer04-pytorch
-              docker load < result
-
-              echo "Building Layer 05: pak3 Essentials..."
-              nix build .#layer05-pak3
-              docker load < result
-
-              echo "Building Layer 06: CuPy..."
-              nix build .#layer06-cupy
-              docker load < result
-
-              echo "Building Layer 07: pak5 Extended..."
-              nix build .#layer07-pak5
-              docker load < result
-
-              echo "Building Layer 08: pak7 Face/Git..."
-              nix build .#layer08-pak7
-              docker load < result
-
-              echo "Building Layer 09: SAM (placeholder)..."
-              nix build .#layer09-sam
-              docker load < result
-
-              echo "Building Layer 10: Performance libs..."
-              nix build .#layer10-performance
-              docker load < result
-
-              echo "Building Layer 11: Application scripts..."
-              nix build .#layer11-app
-              docker load < result
-
-              echo "Building Layer 12: ComfyUI Bundle (Final)..."
-              nix build .#layer12-comfyui
+              echo ""
+              echo "Loading image into Docker..."
               ./result | docker load
 
               echo ""
-              echo "Done! Image: comfyui-boot:cu130-megapak-py314-nix"
+              echo "Done! Image: comfyui-boot:cu130-megapak-py314-nix-nix2container"
               echo ""
               echo "Verify packages:"
-              docker run --rm comfyui-boot:cu130-megapak-py314-nix python -c "import torch; print(f'PyTorch {torch.__version__} CUDA {torch.version.cuda}')"
+              docker run --rm comfyui-boot:cu130-megapak-py314-nix-nix2container \
+                python -c "import torch; print(f'PyTorch {torch.__version__} CUDA {torch.version.cuda}')"
             '');
           };
 
-          # Build final image directly
-          build-final = {
+          # Copy to registry (Skopeo-based, fast!)
+          push-ghcr = {
             type = "app";
-            program = toString (pkgs.writeScript "build-final" ''
+            program = toString (pkgs.writeScript "push-ghcr" ''
               #!${pkgs.bash}/bin/bash
               set -e
-              echo "Building final ComfyUI image..."
-              nix build .#comfyui
-              ./result | docker load
-              echo "Done! Image: comfyui-boot:cu130-megapak-py314-nix"
+
+              REGISTRY="ghcr.io/$GITHUB_REPOSITORY_OWNER"
+              IMAGE_NAME="comfyui-nix2container"
+              TAG="cu130-megapak-py314"
+
+              echo "Building and pushing to $REGISTRY/$IMAGE_NAME:$TAG"
+
+              # nix2container supports direct push without docker daemon
+              nix run .#comfyui.copyToRegistry -- \
+                --dest-creds "$GITHUB_ACTOR:$GITHUB_TOKEN" \
+                $REGISTRY/$IMAGE_NAME:$TAG
+
+              echo "Pushed to $REGISTRY/$IMAGE_NAME:$TAG"
             '');
           };
 
-          # Helper to verify Python environment
+          # Verify Python environment
           check-packages = {
             type = "app";
             program = toString (pkgs.writeScript "check-packages" ''
               #!${pkgs.bash}/bin/bash
               echo "Python environment packages:"
-              ${pythonWithAllPackages}/bin/python -c "import sys; print('\\n'.join(sorted(sys.path)))"
+              ${python.withPackages (ps: packageList.all)}/bin/python -c "import sys; print('\\n'.join(sorted(sys.path)))"
               echo ""
               echo "Installed packages:"
-              ${pythonWithAllPackages}/bin/python -m pip list
+              ${python.withPackages (ps: packageList.all)}/bin/python -m pip list
             '');
           };
         };
@@ -192,35 +379,41 @@
         # Development shell
         devShells.default = pkgs.mkShell {
           buildInputs = [
-            pythonWithAllPackages
+            (python.withPackages (ps: packageList.all))
             pkgs.nix-prefetch-git
             pkgs.nix-prefetch-scripts
+            pkgs.skopeo  # For registry operations
           ];
 
           shellHook = ''
-            echo "ComfyUI Nix Development Environment (Layered Build)"
-            echo "Python: ${pythonWithAllPackages}/bin/python3"
+            echo "ComfyUI Nix Development Environment (nix2container)"
+            echo "Python: ${python}/bin/python3"
             echo ""
             echo "Available commands:"
-            echo "  nix run .#build-all-layers  - Build all Docker layers incrementally"
-            echo "  nix run .#build-final        - Build final image directly"
-            echo "  nix run .#check-packages     - Verify Python environment"
-            echo "  nix build .#layer01-base-cuda   - Build specific layer"
-            echo "  nix build .#layer12-comfyui     - Build final layer"
+            echo "  nix run .#build           - Build and load Docker image"
+            echo "  nix run .#push-ghcr       - Push to GHCR (requires auth)"
+            echo "  nix run .#check-packages  - Verify Python environment"
             echo ""
-            echo "Individual layers:"
-            echo "  layer01: Base + CUDA"
-            echo "  layer02: Python + Tools"
-            echo "  layer03: GCC 15"
-            echo "  layer04: PyTorch"
-            echo "  layer05: pak3 (Core ML)"
-            echo "  layer06: CuPy"
-            echo "  layer07: pak5 (Extended)"
-            echo "  layer08: pak7 (Face/Git)"
-            echo "  layer09: SAM (TODO)"
-            echo "  layer10: Performance libs"
-            echo "  layer11: App scripts"
-            echo "  layer12: ComfyUI Bundle"
+            echo "Layer architecture:"
+            echo "  01: Base system utilities"
+            echo "  02: CUDA Toolkit + cuDNN"
+            echo "  03: Build tools (gcc, cmake, git, ffmpeg)"
+            echo "  04: Python 3.14"
+            echo "  05: GCC 15"
+            echo "  06: PyTorch + torchvision + torchaudio"
+            echo "  07: pak3 (Core ML essentials - ~42 packages)"
+            echo "  08: CuPy CUDA 13.x"
+            echo "  09: pak5 (Extended libraries - ~72 packages)"
+            echo "  10: pak7 (Face analysis + Git packages)"
+            echo "  11: Performance (flash-attn, sageattention, nunchaku)"
+            echo "  12: Application scripts"
+            echo ""
+            echo "Benefits of nix2container:"
+            echo "  ✓ Zero package duplication across layers"
+            echo "  ✓ Automatic dependency deduplication"
+            echo "  ✓ Faster builds (no tarball in Nix store)"
+            echo "  ✓ Direct registry push (skip docker load)"
+            echo "  ✓ Efficient layer caching"
             echo ""
           '';
         };
