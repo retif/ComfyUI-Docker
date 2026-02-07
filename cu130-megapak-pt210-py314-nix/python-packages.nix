@@ -192,7 +192,7 @@ in rec {
     version = "6.3.1";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-10q0vm4xqwqmgl95s21s0a6rhibrdkxh3wakvfd2zk8m419ynw3w";  # TODO: prefetch
     };
     propagatedBuildInputs = with pythonPackages; [ wcwidth ];
   };
@@ -202,7 +202,7 @@ in rec {
     version = "12.560.30";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-0wrwpjj8cxz4s2f4ls78p7fwis80wigvifqp3ihqmqv39p4p38zy";  # TODO: prefetch
     };
   };
 
@@ -212,7 +212,7 @@ in rec {
     version = "4.10.0.84";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-1710af3q6s5z450s3yjfhkva54d8qip6rcb9xcx5733d08chjjzf";  # TODO: prefetch
     };
     format = "wheel";
     propagatedBuildInputs = with pythonPackages; [ numpy ];
@@ -223,7 +223,7 @@ in rec {
     version = "4.10.0.84";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-1kzz2s2p1q4kn3x40d0fkll3k63qf6zmamxiyg3175l33v4cd4dy";  # TODO: prefetch
     };
     format = "wheel";
     propagatedBuildInputs = with pythonPackages; [ numpy ];
@@ -235,7 +235,7 @@ in rec {
     version = "1.0.17";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-08gfl309vj1ci0my1bgggac73kyc3bm1c9xsgls6w2jnxjlp6k58";  # TODO: prefetch
     };
     propagatedBuildInputs = [ torch pythonPackages.pyyaml pythonPackages.huggingface-hub ];
   };
@@ -245,7 +245,7 @@ in rec {
     version = "1.2.1";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-1pwdxvyfl2sl47cr8zcw9klql6sbjq9bhinyzg6yfdzqijavn75y";  # TODO: prefetch
     };
     propagatedBuildInputs = with pythonPackages; [ numpy pyyaml psutil torch ];
   };
@@ -255,7 +255,7 @@ in rec {
     version = "0.31.0";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-07qcsgw25bxvr4chs7wsk8pyyag2pvf9qr0779ygrazlcfp9ii6b";  # TODO: prefetch
     };
     propagatedBuildInputs = with pythonPackages; [
       numpy pillow requests regex
@@ -268,7 +268,7 @@ in rec {
     version = "1.6.0";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-0allrdy2x3jsvwcwq0pwzzwaz4zlz4mq26d4anpxmkk6fzccs255";  # TODO: prefetch
     };
     propagatedBuildInputs = [ torch pythonPackages.numpy ];
   };
@@ -278,7 +278,7 @@ in rec {
     version = "0.7.4";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-0248w823m0x5sx6qmgs9lz3nwr0yyvdlc2jh399p72l78m66p08v";  # TODO: prefetch
     };
     propagatedBuildInputs = [ torch ];
   };
@@ -289,7 +289,7 @@ in rec {
     version = "2.0.3";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-1vs3fjsgrk4mkgvwbmq8cjj9pv1ywicxh07y5phrmi8g4g7vc2pb";  # TODO: prefetch
     };
     propagatedBuildInputs = [ torch pythonPackages.transformers ];
   };
@@ -299,7 +299,7 @@ in rec {
     version = "1.2.2";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-0378v19ddk7s4av6sy3m4za99qd8lj5jqpqmps81n3rgn23689y2";  # TODO: prefetch
     };
   };
 
@@ -308,7 +308,7 @@ in rec {
     version = "0.4.0";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-1c9704r1b1hry3pg33if1knx004a8m8338rvyj4yakwlzqakz7w1";  # TODO: prefetch
     };
     propagatedBuildInputs = [ torch ];
   };
@@ -319,7 +319,7 @@ in rec {
     version = "0.7.3";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-1xyxd3359wr3q1vddz76hq7wsi05a0a6i4s1iw0kgfrfc4czg4gi";  # TODO: prefetch
     };
     propagatedBuildInputs = with pythonPackages; [ numpy opencv4 ];
   };
@@ -329,7 +329,7 @@ in rec {
     version = "0.3.0";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-0y5804y68hh55fz78baaf8j2mbfgiihyzcz82v321f1p2n35hp94";  # TODO: prefetch
     };
     propagatedBuildInputs = with pythonPackages; [ numpy pillow opencv4 torch torchvision ];
   };
@@ -340,7 +340,7 @@ in rec {
     version = "2.4.0";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-1z2xz9f4scgb6qb7d511pi9lvj6xnv1g83za0jhc5kfkpxmvb6r4";  # TODO: prefetch
     };
   };
 
@@ -349,7 +349,7 @@ in rec {
     version = "0.7.3";
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: prefetch
+      sha256 = "sha256-0312515jcqj103gw9qvilrzwzisisfsswcflpwi09qg1r083r8ri";  # TODO: prefetch
     };
   };
 

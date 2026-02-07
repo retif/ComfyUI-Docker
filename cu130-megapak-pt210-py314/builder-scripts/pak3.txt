@@ -34,7 +34,7 @@ transformers
 compel
 lark
 # For Frame Interpolation
-cupy-cuda12x
+cupy-cuda13x==14.0.0rc1
 # For APISR
 fairscale
 # For DepthFM

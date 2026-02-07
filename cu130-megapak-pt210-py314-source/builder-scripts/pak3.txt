@@ -34,7 +34,7 @@ transformers
 compel
 lark
 # For Frame Interpolation
-# cupy-cuda12x  # Disabled: No Python 3.14 free-threaded build available yet
+cupy-cuda13x==14.0.0rc1  # Minimum version with Python 3.14 support
 # For APISR
 fairscale
 # For DepthFM
