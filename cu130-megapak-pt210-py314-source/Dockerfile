@@ -147,7 +147,7 @@ RUN --mount=type=cache,target=/var/cache/zypp \
         install --no-confirm --auto-agree-with-licenses \
 make \
 gcc \
-g++ \
+gcc-c++ \
 libopenssl-devel \
 libffi-devel \
 libbz2-devel \
