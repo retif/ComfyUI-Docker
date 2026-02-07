@@ -87,6 +87,35 @@ jobs:
           COMFYUI_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 bash -c "cd /default-comfyui-bundle/ComfyUI && git describe --tags --always" || echo "unknown")
           echo "comfyui_version=${COMFYUI_VERSION}" >> $GITHUB_OUTPUT
 
+          # Extract ComfyUI Manager version
+          MANAGER_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 bash -c "cd /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager && git describe --tags --always" || echo "unknown")
+          echo "manager_version=${MANAGER_VERSION}" >> $GITHUB_OUTPUT
+
+          # Extract Frontend version
+          FRONTEND_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 bash -c "cd /default-comfyui-bundle/ComfyUI/web && git describe --tags --always" || echo "unknown")
+          echo "frontend_version=${FRONTEND_VERSION}" >> $GITHUB_OUTPUT
+
+          # Count custom nodes
+          CUSTOM_NODES_COUNT=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 bash -c "ls -1d /default-comfyui-bundle/ComfyUI/custom_nodes/*/ 2>/dev/null | wc -l" || echo "0")
+          echo "custom_nodes_count=${CUSTOM_NODES_COUNT}" >> $GITHUB_OUTPUT
+
+          # Extract all ComfyUI-related pip packages
+          COMFYUI_PACKAGES=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 bash -c "pip list | grep -i comfyui | awk '{print \"- **\" \$1 \"**: \" \$2}'" || echo "")
+          # Use EOF delimiter to preserve multiline output
+          echo "comfyui_packages<<EOF" >> $GITHUB_OUTPUT
+          echo "${COMFYUI_PACKAGES}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Extract key performance package versions
+          FLASH_ATTN_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 pip show flash-attn 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
+          echo "flash_attn_version=${FLASH_ATTN_VERSION}" >> $GITHUB_OUTPUT
+
+          SAGE_ATTN_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 pip show sageattention 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
+          echo "sage_attn_version=${SAGE_ATTN_VERSION}" >> $GITHUB_OUTPUT
+
+          NUNCHAKU_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 pip show nunchaku 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
+          echo "nunchaku_version=${NUNCHAKU_VERSION}" >> $GITHUB_OUTPUT
+
           # Create version tag
           VERSION_TAG="py${PYTHON_VERSION}-pt${PYTORCH_VERSION}-cu${CUDA_VERSION}-comfy${COMFYUI_VERSION}"
           echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
@@ -95,6 +124,12 @@ jobs:
           echo "PyTorch: ${PYTORCH_VERSION}"
           echo "CUDA: ${CUDA_VERSION}"
           echo "ComfyUI: ${COMFYUI_VERSION}"
+          echo "ComfyUI Manager: ${MANAGER_VERSION}"
+          echo "Frontend: ${FRONTEND_VERSION}"
+          echo "Custom Nodes: ${CUSTOM_NODES_COUNT}"
+          echo "Flash Attention: ${FLASH_ATTN_VERSION}"
+          echo "SageAttention: ${SAGE_ATTN_VERSION}"
+          echo "Nunchaku: ${NUNCHAKU_VERSION}"
           echo "Version Tag: ${VERSION_TAG}"
       -
         name: Show 'cu130-megapak-pt210' environment variables
@@ -142,17 +177,25 @@ jobs:
           body: |
             # ComfyUI Docker Image - CUDA 13.0 Megapak (Python 3.13)
 
-            ## Version Information
+            ## Core Versions
             - **Python**: ${{ steps.versions.outputs.python_version }} (with GIL)
             - **PyTorch**: ${{ steps.versions.outputs.pytorch_version }}
-            - **ComfyUI**: ${{ steps.versions.outputs.comfyui_version }}
             - **CUDA**: 13.0
             - **Build Date**: ${{ steps.date.outputs.date }}
 
-            ## Custom Wheels Included
-            - **Flash Attention** v2.8.2 (Python 3.13 + PyTorch 2.10.0 + CUDA 13.0)
-            - **SageAttention** v2.2.0 (Python 3.13 + PyTorch 2.10.0 + CUDA 13.0)
-            - **Nunchaku** v1.0.2 (Python 3.13 + PyTorch 2.10.0 + CUDA 13.0)
+            ## ComfyUI Components
+            - **ComfyUI Core**: ${{ steps.versions.outputs.comfyui_version }}
+            - **ComfyUI Manager**: ${{ steps.versions.outputs.manager_version }}
+            - **ComfyUI Frontend**: ${{ steps.versions.outputs.frontend_version }}
+            - **Custom Nodes**: ${{ steps.versions.outputs.custom_nodes_count }} nodes installed
+
+            ### ComfyUI Python Packages
+            ${{ steps.versions.outputs.comfyui_packages }}
+
+            ## Performance Optimization Libraries
+            - **Flash Attention**: ${{ steps.versions.outputs.flash_attn_version }}
+            - **SageAttention**: ${{ steps.versions.outputs.sage_attn_version }}
+            - **Nunchaku**: ${{ steps.versions.outputs.nunchaku_version }}
 
             ## Image Locations
 
