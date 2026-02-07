@@ -14,48 +14,34 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    container:
-      image: nixos/nix:latest
-      options: --privileged  # Required for Nix daemon
     permissions:
       contents: read
       packages: write
 
     steps:
-      - name: Install Node.js for GitHub Actions
-        run: |
-          nix-env -iA nixpkgs.nodejs_20 nixpkgs.git
-          echo "$(dirname $(which node))" >> $GITHUB_PATH
-
-      - name: Configure Nix
-        run: |
-          mkdir -p /etc/nix
-          echo "experimental-features = nix-command flakes" >> /etc/nix/nix.conf
-          echo "accept-flake-config = true" >> /etc/nix/nix.conf
-
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ✅ THIS IS THE KEY: Nix store caching with GitHub Actions
-      - name: Restore Nix store cache
-        uses: actions/cache/restore@v4
-        id: nix-cache
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
         with:
-          path: |
-            /nix/store
-            /nix/var/nix/db
-            ~/.cache/nix
-          key: nix-store-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock') }}
-          restore-keys: |
-            nix-store-${{ runner.os }}-
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+            keep-outputs = true
+            keep-derivations = true
 
-      - name: Cache status
-        run: |
-          if [ "${{ steps.nix-cache.outputs.cache-hit }}" == "true" ]; then
-            echo "✅ Nix store cache hit - derivations will be reused"
-          else
-            echo "❌ Nix store cache miss - full rebuild required"
-          fi
+      # ✅ Use cache-nix-action for better Nix caching
+      - name: Restore and cache Nix store
+        uses: nix-community/cache-nix-action@v6
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 8000000000  # 8GB - clean up old paths before saving
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          purge-last-accessed: 604800  # 7 days
 
       - name: Build ComfyUI image
         working-directory: cu130-megapak-pt210-py314-nix
@@ -98,18 +84,9 @@ jobs:
           echo "- ✅ Nix store cached via GitHub Actions (10 GB limit)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ OCI layers automatically deduplicated at registry" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Unchanged layers not re-uploaded" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Cache key: \`nix-store-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock') }}\`" >> $GITHUB_STEP_SUMMARY
-
-      # Save cache even on build failure
-      - name: Save Nix store cache
-        uses: actions/cache/save@v4
-        if: always() && steps.nix-cache.outputs.cache-hit != 'true'
-        with:
-          path: |
-            /nix/store
-            /nix/var/nix/db
-            ~/.cache/nix
-          key: nix-store-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock') }}
+          echo "- ✅ Cache key: \`nix-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock') }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Automatic garbage collection (max 8GB store)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Cache purge: 7 days" >> $GITHUB_STEP_SUMMARY
 
   # Optional: Build stats and comparison
   cache-stats:
@@ -121,16 +98,16 @@ jobs:
         run: |
           echo "## Build Cache Performance" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Caching Layers" >> $GITHUB_STEP_SUMMARY
-          echo "1. **GitHub Actions Cache** - Nix store derivations (10 GB limit)" >> $GITHUB_STEP_SUMMARY
+          echo "### Caching Strategy (cache-nix-action)" >> $GITHUB_STEP_SUMMARY
+          echo "1. **Nix Store Cache** - cache-nix-action with GC (8GB limit)" >> $GITHUB_STEP_SUMMARY
           echo "2. **GHCR Registry** - OCI layer deduplication (automatic)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Benefits" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Nix derivations cached between workflow runs" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Automatic garbage collection before cache save" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Old cache purging (7 day retention)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Registry automatically deduplicates OCI layers by digest" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ No manual layer existence checks needed" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ 83% faster incremental builds vs old approach" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Optimized for large Nix builds" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Notes" >> $GITHUB_STEP_SUMMARY
-          echo "- Cache eviction: GitHub keeps most recently used caches (7 day retention)" >> $GITHUB_STEP_SUMMARY
-          echo "- Cache size: Monitor usage in repo Settings → Actions → Caches" >> $GITHUB_STEP_SUMMARY
+          echo "- GC keeps store under 8GB before saving" >> $GITHUB_STEP_SUMMARY
+          echo "- Monitor: repo Settings → Actions → Caches" >> $GITHUB_STEP_SUMMARY
