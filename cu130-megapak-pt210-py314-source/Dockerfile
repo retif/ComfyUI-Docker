@@ -266,7 +266,7 @@ COPY builder-scripts/.  /builder-scripts/
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip setuptools wheel && \
-    pip install --only-binary opencv-python,opencv-python-headless,opencv-contrib-python,opencv-contrib-python-headless \
+    pip install \
         -r /builder-scripts/pak3.txt
 
 # Install CuPy RC version with Python 3.14 support

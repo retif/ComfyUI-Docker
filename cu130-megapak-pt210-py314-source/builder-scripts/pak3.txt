@@ -11,10 +11,12 @@ nvidia-ml-py
 omegaconf
 onnx
 onnxruntime-gpu
-opencv-contrib-python
-opencv-contrib-python-headless
-opencv-python
-opencv-python-headless
+# TEMPORARILY COMMENTED: No wheels available for Python 3.14 yet
+# Will re-enable when opencv-python releases Python 3.14 wheels
+# opencv-contrib-python
+# opencv-contrib-python-headless
+# opencv-python
+# opencv-python-headless
 pandas
 pilgram
 pillow
