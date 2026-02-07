@@ -213,10 +213,7 @@ findutils \
 fish \
 fd \
 vim \
-which \
-ffmpeg \
-x264 \
-x265
+which
 
 # Temp fix for OpenCV on openSUSE
 ENV LD_PRELOAD=/usr/lib64/libjpeg.so.8
