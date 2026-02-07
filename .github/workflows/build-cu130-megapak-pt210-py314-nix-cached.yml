@@ -1,0 +1,386 @@
+name: Publish 'cu130-megapak-pt210-py314-nix' to GHCR (Cached)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**'
+      - '!cu130-megapak-pt210-py314-nix/**'
+      - '!.github/workflows/build-cu130-megapak-pt210-py314-nix-cached.yml'
+
+jobs:
+
+  build-test-publish-cu130-megapak-pt210-py314-nix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+
+      - name: Move Docker data-root to /mnt
+        run: |
+          sudo systemctl stop docker
+          sudo mkdir -p /mnt/docker
+          sudo mkdir -p /etc/docker
+          cat /etc/docker/daemon.json || true
+          sudo tee /etc/docker/daemon.json > /dev/null <<'EOF'
+          {
+            "data-root": "/mnt/docker"
+          }
+          EOF
+          sudo systemctl restart docker
+          docker info | grep "Docker Root Dir"
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y%m%d')" >> $GITHUB_OUTPUT
+
+      - name: Git checkout
+        uses: actions/checkout@v6
+
+      # GitHub Actions Cache for Nix metadata (the "Nix way")
+      - name: Cache Nix store metadata
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/nix
+            /nix/var/nix/db
+            /nix/var/nix/gcroots
+          key: nix-store-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock', 'cu130-megapak-pt210-py314-nix/flake-layered.nix') }}
+          restore-keys: |
+            nix-store-${{ runner.os }}-
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v25
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            accept-flake-config = true
+            # Use official Nix cache
+            substituters = https://cache.nixos.org
+            trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Helper script to check if layer exists in registry
+      - name: Create cache check script
+        run: |
+          cat > /tmp/check-layer-cache.sh <<'SCRIPT'
+          #!/bin/bash
+          LAYER_NAME=$1
+          IMAGE_REF="ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:${LAYER_NAME}"
+
+          if docker pull "$IMAGE_REF" 2>/dev/null; then
+            echo "✓ Layer $LAYER_NAME found in cache"
+            echo "cached=true" >> $GITHUB_OUTPUT
+            return 0
+          else
+            echo "✗ Layer $LAYER_NAME not in cache, will build"
+            echo "cached=false" >> $GITHUB_OUTPUT
+            return 1
+          fi
+          SCRIPT
+          chmod +x /tmp/check-layer-cache.sh
+
+      # Build Layer 0: Base + CUDA
+      - name: Check Layer 0 cache
+        id: cache-layer0
+        continue-on-error: true
+        run: /tmp/check-layer-cache.sh "layer0-base-cuda130"
+
+      - name: Build Layer 0 (if needed)
+        if: steps.cache-layer0.outputs.cached != 'true'
+        working-directory: ./cu130-megapak-pt210-py314-nix
+        run: |
+          echo "Building Layer 0: Base + CUDA..."
+          nix build .#layer0-base --print-build-logs
+          docker load < result
+          docker tag comfyui-layer0-base:cuda130 \
+            ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer0-base-cuda130
+          docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer0-base-cuda130
+          echo "✓ Layer 0 built and cached"
+
+      # Build Layer 1: Python + nixpkgs packages
+      - name: Check Layer 1 cache
+        id: cache-layer1
+        continue-on-error: true
+        run: /tmp/check-layer-cache.sh "layer1-python-py314"
+
+      - name: Build Layer 1 (if needed)
+        if: steps.cache-layer1.outputs.cached != 'true'
+        working-directory: ./cu130-megapak-pt210-py314-nix
+        run: |
+          echo "Building Layer 1: Python + nixpkgs..."
+          nix build .#layer1-python --print-build-logs
+          docker load < result
+          docker tag comfyui-layer1-python:py314 \
+            ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer1-python-py314
+          docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer1-python-py314
+          echo "✓ Layer 1 built and cached"
+
+      # Build Layer 2: Downloaded wheels
+      - name: Check Layer 2 cache
+        id: cache-layer2
+        continue-on-error: true
+        run: /tmp/check-layer-cache.sh "layer2-wheels"
+
+      - name: Build Layer 2 (if needed)
+        if: steps.cache-layer2.outputs.cached != 'true'
+        working-directory: ./cu130-megapak-pt210-py314-nix
+        run: |
+          echo "Building Layer 2: Downloaded wheels..."
+          nix build .#layer2-wheels --print-build-logs
+          docker load < result
+          docker tag comfyui-layer2-wheels:latest \
+            ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer2-wheels
+          docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer2-wheels
+          echo "✓ Layer 2 built and cached"
+
+      # Build Layer 3: PyTorch installed
+      - name: Check Layer 3 cache
+        id: cache-layer3
+        continue-on-error: true
+        run: /tmp/check-layer-cache.sh "layer3-pytorch-cu130"
+
+      - name: Build Layer 3 (if needed)
+        if: steps.cache-layer3.outputs.cached != 'true'
+        working-directory: ./cu130-megapak-pt210-py314-nix
+        run: |
+          echo "Building Layer 3: PyTorch..."
+          nix build .#layer3-pytorch --print-build-logs
+          docker load < result
+          docker tag comfyui-layer3-pytorch:cu130 \
+            ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer3-pytorch-cu130
+          docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer3-pytorch-cu130
+          echo "✓ Layer 3 built and cached"
+
+      # Build Layer 4: Dependencies
+      - name: Check Layer 4 cache
+        id: cache-layer4
+        continue-on-error: true
+        run: /tmp/check-layer-cache.sh "layer4-deps"
+
+      - name: Build Layer 4 (if needed)
+        if: steps.cache-layer4.outputs.cached != 'true'
+        working-directory: ./cu130-megapak-pt210-py314-nix
+        run: |
+          echo "Building Layer 4: Dependencies..."
+          nix build .#layer4-deps --print-build-logs
+          docker load < result
+          docker tag comfyui-layer4-deps:latest \
+            ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer4-deps
+          docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer4-deps
+          echo "✓ Layer 4 built and cached"
+
+      # Build Layer 5: Performance wheels
+      - name: Check Layer 5 cache
+        id: cache-layer5
+        continue-on-error: true
+        run: /tmp/check-layer-cache.sh "layer5-perf"
+
+      - name: Build Layer 5 (if needed)
+        if: steps.cache-layer5.outputs.cached != 'true'
+        working-directory: ./cu130-megapak-pt210-py314-nix
+        run: |
+          echo "Building Layer 5: Performance wheels..."
+          nix build .#layer5-perf --print-build-logs
+          docker load < result
+          docker tag comfyui-layer5-perf:latest \
+            ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer5-perf
+          docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer5-perf
+          echo "✓ Layer 5 built and cached"
+
+      # Build Layer 6: ComfyUI app (always rebuild - changes most frequently)
+      - name: Build Layer 6 (always)
+        working-directory: ./cu130-megapak-pt210-py314-nix
+        run: |
+          echo "Building Layer 6: ComfyUI app..."
+          nix build .#layer6-app --print-build-logs
+          docker load < result
+          docker tag comfyui-layer6-app:latest \
+            ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer6-app
+          docker push ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:layer6-app
+          echo "✓ Layer 6 built"
+
+      # Build final image (combines all layers)
+      - name: Build final image
+        working-directory: ./cu130-megapak-pt210-py314-nix
+        run: |
+          echo "Building final image..."
+          nix build .#comfyui --print-build-logs
+          ./result | docker load
+
+          # Tag with date
+          docker tag comfyui-boot:cu130-megapak-py314-nix \
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix-${{ steps.date.outputs.date }}
+
+      - name: Extract version information
+        id: versions
+        run: |
+          # Extract Python version
+          PYTHON_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix python3 --version | awk '{print $2}')
+          echo "python_version=${PYTHON_VERSION}" >> $GITHUB_OUTPUT
+
+          # Extract PyTorch version
+          PYTORCH_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix pip show torch | grep '^Version:' | awk '{print $2}')
+          echo "pytorch_version=${PYTORCH_VERSION}" >> $GITHUB_OUTPUT
+
+          # CUDA version
+          CUDA_VERSION="13.0"
+          echo "cuda_version=${CUDA_VERSION}" >> $GITHUB_OUTPUT
+
+          # Extract ComfyUI version
+          COMFYUI_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix bash -c "cd /default-comfyui-bundle/ComfyUI && git describe --tags --always" || echo "unknown")
+          echo "comfyui_version=${COMFYUI_VERSION}" >> $GITHUB_OUTPUT
+
+          # Extract ComfyUI Manager version
+          MANAGER_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix bash -c "cd /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager && git describe --tags --always" || echo "unknown")
+          echo "manager_version=${MANAGER_VERSION}" >> $GITHUB_OUTPUT
+
+          # Extract Frontend version
+          FRONTEND_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix bash -c "cd /default-comfyui-bundle/ComfyUI/web && git describe --tags --always" || echo "unknown")
+          echo "frontend_version=${FRONTEND_VERSION}" >> $GITHUB_OUTPUT
+
+          # Count custom nodes
+          CUSTOM_NODES_COUNT=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix bash -c "ls -1d /default-comfyui-bundle/ComfyUI/custom_nodes/*/ 2>/dev/null | wc -l" || echo "0")
+          echo "custom_nodes_count=${CUSTOM_NODES_COUNT}" >> $GITHUB_OUTPUT
+
+          # Extract all ComfyUI-related pip packages
+          COMFYUI_PACKAGES=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix bash -c "pip list | grep -i comfyui | awk '{print \"- **\" \$1 \"**: \" \$2}'" || echo "")
+          echo "comfyui_packages<<EOF" >> $GITHUB_OUTPUT
+          echo "${COMFYUI_PACKAGES}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          # Extract key package versions
+          FLASH_ATTN_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix pip show flash-attn 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
+          echo "flash_attn_version=${FLASH_ATTN_VERSION}" >> $GITHUB_OUTPUT
+
+          SAGE_ATTN_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix pip show sageattention 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
+          echo "sage_attn_version=${SAGE_ATTN_VERSION}" >> $GITHUB_OUTPUT
+
+          NUNCHAKU_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix pip show nunchaku 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
+          echo "nunchaku_version=${NUNCHAKU_VERSION}" >> $GITHUB_OUTPUT
+
+          # Create version tag
+          VERSION_TAG="py${PYTHON_VERSION}-pt${PYTORCH_VERSION}-cu${CUDA_VERSION}-comfy${COMFYUI_VERSION}-nix-cached"
+          echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
+
+          echo "Python: ${PYTHON_VERSION}"
+          echo "PyTorch: ${PYTORCH_VERSION}"
+          echo "CUDA: ${CUDA_VERSION}"
+          echo "ComfyUI: ${COMFYUI_VERSION}"
+          echo "Version Tag: ${VERSION_TAG}"
+
+      - name: Test image
+        run: |
+          docker run --rm \
+            --name comfyui-quick-test \
+            -e CLI_ARGS="--quick-test-for-ci --cpu" \
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix
+
+      - name: Push final image with version tags
+        run: |
+          # Tag and push
+          docker tag ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix-${{ steps.date.outputs.date }} \
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix
+
+          docker tag ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix \
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}
+
+          docker tag ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix \
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
+
+          # Push all tags
+          docker push ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix
+          docker push ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix-${{ steps.date.outputs.date }}
+          docker push ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}
+          docker push ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
+
+      - name: Create build summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Layer Cache Status" >> $GITHUB_STEP_SUMMARY
+          echo "| Layer | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Layer 0: Base + CUDA | ${{ steps.cache-layer0.outputs.cached == 'true' && '✓ Cached' || '✗ Built' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Layer 1: Python | ${{ steps.cache-layer1.outputs.cached == 'true' && '✓ Cached' || '✗ Built' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Layer 2: Wheels | ${{ steps.cache-layer2.outputs.cached == 'true' && '✓ Cached' || '✗ Built' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Layer 3: PyTorch | ${{ steps.cache-layer3.outputs.cached == 'true' && '✓ Cached' || '✗ Built' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Layer 4: Dependencies | ${{ steps.cache-layer4.outputs.cached == 'true' && '✓ Cached' || '✗ Built' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Layer 5: Performance | ${{ steps.cache-layer5.outputs.cached == 'true' && '✓ Cached' || '✗ Built' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Layer 6: ComfyUI | Always built |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Versions" >> $GITHUB_STEP_SUMMARY
+          echo "- Python: ${{ steps.versions.outputs.python_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- PyTorch: ${{ steps.versions.outputs.pytorch_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- CUDA: ${{ steps.versions.outputs.cuda_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ComfyUI: ${{ steps.versions.outputs.comfyui_version }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: cu130-megapak-py314-nix-${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
+          name: ComfyUI cu130-megapak-py314-nix - ${{ steps.versions.outputs.version_tag }}
+          body: |
+            # ComfyUI Docker Image - CUDA 13.0 Megapak (Python 3.14 NixOS - Cached Build)
+
+            **Built with NixOS Flakes** - Declarative, reproducible, layered architecture with intelligent caching
+
+            ## Build Strategy
+            - **Dual caching**: Registry (GHCR) + GitHub Actions
+            - **7 independent layers**: Each cached separately for optimal reuse
+            - **Smart rebuilding**: Only changed layers rebuild
+            - **Cache locations**:
+              - Layer images: `ghcr.io/${{ github.repository_owner }}/comfyui-nix-layer:*`
+              - Nix metadata: GitHub Actions cache
+
+            ## Core Versions
+            - **Python**: ${{ steps.versions.outputs.python_version }} (free-threaded, no GIL, via Nix)
+            - **PyTorch**: ${{ steps.versions.outputs.pytorch_version }}
+            - **CUDA**: 13.0
+            - **Build Date**: ${{ steps.date.outputs.date }}
+
+            ## ComfyUI Components
+            - **ComfyUI Core**: ${{ steps.versions.outputs.comfyui_version }}
+            - **ComfyUI Manager**: ${{ steps.versions.outputs.manager_version }}
+            - **ComfyUI Frontend**: ${{ steps.versions.outputs.frontend_version }}
+            - **Custom Nodes**: ${{ steps.versions.outputs.custom_nodes_count }} nodes installed
+
+            ### ComfyUI Python Packages
+            ${{ steps.versions.outputs.comfyui_packages }}
+
+            ## Performance Optimization Libraries
+            - **Flash Attention**: ${{ steps.versions.outputs.flash_attn_version }}
+            - **SageAttention**: ${{ steps.versions.outputs.sage_attn_version }}
+            - **Nunchaku**: ${{ steps.versions.outputs.nunchaku_version }}
+
+            ## Image Locations
+
+            ### Pull with version tag:
+            ```bash
+            docker pull ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}
+            ```
+
+            ### Pull latest NixOS variant:
+            ```bash
+            docker pull ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-py314-nix
+            ```
+
+            ## Build Method
+            - **Declarative**: Built with Nix flakes
+            - **Reproducible**: Locked dependencies via flake.lock
+            - **Layered**: 7-layer architecture with independent caching
+            - **Source**: `cu130-megapak-pt210-py314-nix/flake-layered.nix`
+
+            ## Commit
+            - **SHA**: ${{ github.sha }}
+            - **Ref**: ${{ github.ref }}
+          draft: false
+          prerelease: false
