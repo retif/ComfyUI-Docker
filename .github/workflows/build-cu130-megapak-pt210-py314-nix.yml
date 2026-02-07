@@ -58,18 +58,6 @@ jobs:
           echo "=== After cleanup ==="
           df -h
 
-      # Move Nix store to /mnt for more space
-      - name: Configure Nix to use /mnt
-        run: |
-          sudo mkdir -p /mnt/nix
-          sudo mkdir -p /nix
-
-          # Create symlink from /nix/store to /mnt/nix/store
-          sudo ln -sf /mnt/nix/store /nix/store || true
-
-          echo "Nix store will use /mnt/nix"
-          df -h /mnt
-
       # GitHub Actions Cache for Nix metadata (the "Nix way")
       - name: Cache Nix store metadata
         uses: actions/cache@v4
@@ -89,8 +77,6 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
             accept-flake-config = true
-            # Use /mnt/nix for store (more disk space)
-            store = /mnt/nix/store
             # Use multiple binary caches (read-only)
             # Official Nix cache (most packages)
             # Cachix community cache (additional packages, faster downloads)
