@@ -18,7 +18,7 @@ jobs:
   build-test-publish-cu130-megapak-pt210:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
 
@@ -61,11 +61,37 @@ jobs:
           file: ./cu130-megapak-pt210/Dockerfile
           build-args: |
             USING_GITHUB_ACTIONS=true
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210
             ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-${{ steps.date.outputs.date }}
           load: true
-      - 
+      -
+        name: Extract version information
+        id: versions
+        run: |
+          # Extract Python version
+          PYTHON_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 python3 --version | awk '{print $2}')
+          echo "python_version=${PYTHON_VERSION}" >> $GITHUB_OUTPUT
+
+          # Extract PyTorch version
+          PYTORCH_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 pip show torch | grep '^Version:' | awk '{print $2}')
+          echo "pytorch_version=${PYTORCH_VERSION}" >> $GITHUB_OUTPUT
+
+          # Extract ComfyUI version
+          COMFYUI_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210 bash -c "cd /default-comfyui-bundle/ComfyUI && git describe --tags --always" || echo "unknown")
+          echo "comfyui_version=${COMFYUI_VERSION}" >> $GITHUB_OUTPUT
+
+          # Create version tag
+          VERSION_TAG="py${PYTHON_VERSION}-pt${PYTORCH_VERSION}-comfy${COMFYUI_VERSION}"
+          echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
+
+          echo "Python: ${PYTHON_VERSION}"
+          echo "PyTorch: ${PYTORCH_VERSION}"
+          echo "ComfyUI: ${COMFYUI_VERSION}"
+          echo "Version Tag: ${VERSION_TAG}"
+      -
         name: Show 'cu130-megapak-pt210' environment variables
         run: |
           docker run --rm \
@@ -87,14 +113,67 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
-        name: Push 'cu130-megapak-pt210'
+        name: Push 'cu130-megapak-pt210' with version tags
         uses: docker/build-push-action@v6
         with:
           context: ./cu130-megapak-pt210
           file: ./cu130-megapak-pt210/Dockerfile
           build-args: |
             USING_GITHUB_ACTIONS=true
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
           tags:  |
             ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210
             ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-${{ steps.date.outputs.date }}
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
           push: true
+      -
+        name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: cu130-megapak-py313-${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
+          name: ComfyUI cu130-megapak-py313 - ${{ steps.versions.outputs.version_tag }}
+          body: |
+            # ComfyUI Docker Image - CUDA 13.0 Megapak (Python 3.13)
+
+            ## Version Information
+            - **Python**: ${{ steps.versions.outputs.python_version }} (with GIL)
+            - **PyTorch**: ${{ steps.versions.outputs.pytorch_version }}
+            - **ComfyUI**: ${{ steps.versions.outputs.comfyui_version }}
+            - **CUDA**: 13.0
+            - **Build Date**: ${{ steps.date.outputs.date }}
+
+            ## Custom Wheels Included
+            - **Flash Attention** v2.8.2 (Python 3.13 + PyTorch 2.10.0 + CUDA 13.0)
+            - **SageAttention** v2.2.0 (Python 3.13 + PyTorch 2.10.0 + CUDA 13.0)
+            - **Nunchaku** v1.0.2 (Python 3.13 + PyTorch 2.10.0 + CUDA 13.0)
+
+            ## Image Locations
+
+            ### Pull with version tag:
+            ```bash
+            docker pull ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}
+            ```
+
+            ### Pull with version + date tag:
+            ```bash
+            docker pull ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
+            ```
+
+            ### Pull latest py313 variant:
+            ```bash
+            docker pull ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210
+            ```
+
+            ## All Available Tags
+            - `ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210` (rolling latest)
+            - `ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-${{ steps.date.outputs.date }}`
+            - `ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}`
+            - `ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}`
+
+            ## Commit
+            - **SHA**: ${{ github.sha }}
+            - **Ref**: ${{ github.ref }}
+          draft: false
+          prerelease: false
