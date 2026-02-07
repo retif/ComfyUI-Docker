@@ -1,5 +1,5 @@
 {
-  description = "ComfyUI Docker - Proper layered Nix build";
+  description = "ComfyUI Docker - Pure Nix build (no pip, no fakeRootCommands)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -20,125 +20,147 @@
         python = pkgs.python314;
         cudaPackages = pkgs.cudaPackages_13_0 or pkgs.cudaPackages_12;
 
-        #########################################################################
-        # DOWNLOAD LAYER - Fetch all wheels and sources
-        #########################################################################
-
-        # PyTorch wheels from official index
-        pytorchWheels = {
-          torch = pkgs.fetchurl {
-            url = "https://download.pytorch.org/whl/cu130/torch-2.10.0%2Bcu130-cp314-cp314-linux_x86_64.whl";
-            hash = "sha256-0000000000000000000000000000000000000000000000000000";  # TODO: nix-prefetch-url
-          };
-          torchvision = pkgs.fetchurl {
-            url = "https://download.pytorch.org/whl/cu130/torchvision-0.20.0%2Bcu130-cp314-cp314-linux_x86_64.whl";
-            hash = "sha256-0000000000000000000000000000000000000000000000000000";
-          };
-          torchaudio = pkgs.fetchurl {
-            url = "https://download.pytorch.org/whl/cu130/torchaudio-2.10.0%2Bcu130-cp314-cp314-linux_x86_64.whl";
-            hash = "sha256-0000000000000000000000000000000000000000000000000000";
-          };
-        };
-
-        # Performance wheels from custom builder
-        perfWheels = {
-          flashAttn = pkgs.fetchurl {
-            url = "https://github.com/retif/pytorch-wheels-builder/releases/download/flash-attn-v2.8.2-py314-torch2.10.0-cu130/flash_attn-2.8.2-cp314-cp314-linux_x86_64.whl";
-            hash = "sha256-0000000000000000000000000000000000000000000000000000";
-          };
-          sageattention = pkgs.fetchurl {
-            url = "https://github.com/retif/pytorch-wheels-builder/releases/download/sageattention-v2.2.0-py314-torch2.10.0-cu130/sageattention-2.2.0%2Bcu130torch2.10.0-cp314-cp314-linux_x86_64.whl";
-            hash = "sha256-0000000000000000000000000000000000000000000000000000";
-          };
-          nunchaku = pkgs.fetchurl {
-            url = "https://github.com/retif/pytorch-wheels-builder/releases/download/nunchaku-v1.0.2-py314-torch2.10.0-cu130/nunchaku-1.0.2%2Btorch2.10-cp314-cp314-linux_x86_64.whl";
-            hash = "sha256-0000000000000000000000000000000000000000000000000000";
-          };
+        # Import custom Python packages
+        customPythonPackages = pkgs.callPackage ./python-packages.nix {
+          inherit python cudaPackages;
+          pythonPackages = python.pkgs;
+          buildPythonPackage = python.pkgs.buildPythonPackage;
+          fetchFromGitHub = pkgs.fetchFromGitHub;
+          fetchurl = pkgs.fetchurl;
         };
 
         #########################################################################
-        # PYTHON PACKAGES - Use Nix where available, wheels otherwise
+        # PYTHON ENVIRONMENT - All packages from Nix!
         #########################################################################
 
-        # Python environment with packages from nixpkgs
-        pythonWithPackages = python.withPackages (ps: with ps; [
-          # Core packages from nixpkgs
-          pip setuptools wheel packaging
+        pythonWithAllPackages = python.withPackages (ps: with ps; [
+          # Build tools
+          pip setuptools wheel packaging build
 
-          # Scientific computing (available in nixpkgs)
+          #####################################################################
+          # PYTORCH (from custom packages)
+          #####################################################################
+          customPythonPackages.torch
+          customPythonPackages.torchvision
+          customPythonPackages.torchaudio
+
+          #####################################################################
+          # PERFORMANCE LIBRARIES (from custom packages)
+          #####################################################################
+          customPythonPackages.flash-attn
+          customPythonPackages.sageattention
+          customPythonPackages.nunchaku
+
+          #####################################################################
+          # GIT PACKAGES (from custom packages - built from source)
+          #####################################################################
+          customPythonPackages.clip
+          customPythonPackages.cozy-comfyui
+          customPythonPackages.cozy-comfy
+          customPythonPackages.cstr
+          customPythonPackages.ffmpy
+          customPythonPackages.img2texture
+
+          #####################################################################
+          # PACKAGES FROM NIXPKGS (pak3.txt - essentials)
+          #####################################################################
+          # Core ML frameworks
+          customPythonPackages.accelerate
+          customPythonPackages.diffusers
+          huggingface-hub
+          transformers
+
+          # Scientific computing
           numpy
           scipy
           pillow
           imageio
-
-          # ML/AI packages (available in nixpkgs)
           scikit-learn
           scikit-image
+          matplotlib
+          pandas
+
+          # Computer vision
           opencv4
+          customPythonPackages.opencv-contrib-python
+          customPythonPackages.opencv-contrib-python-headless
+          customPythonPackages.kornia
+
+          # ML utilities
+          customPythonPackages.timm
+          customPythonPackages.torchmetrics
+          customPythonPackages.compel
+          customPythonPackages.lark
+          customPythonPackages.spandrel
 
           # Data formats
           pyyaml
+          omegaconf
+          # onnx  # TODO: check if available
+          # onnxruntime  # Note: need GPU version
 
+          # System utilities
+          joblib
+          psutil
+          tqdm
+          regex
+          customPythonPackages.nvidia-ml-py
+
+          #####################################################################
+          # PACKAGES FROM NIXPKGS (pak5.txt)
+          #####################################################################
           # HTTP/networking
+          aiohttp
           requests
           urllib3
 
-          # Utilities available in nixpkgs
-          tqdm
-          psutil
+          # Data processing
+          # albumentations  # TODO: check if available
+          # av  # TODO: check if available
+          einops
+          numba
+          numexpr
 
-          # Add more from pak files that exist in nixpkgs
+          # ML/AI tools
+          # peft  # TODO: check if available
+          safetensors
+          sentencepiece
+          tokenizers
+
+          # Utilities
+          customPythonPackages.addict
+          cachetools
+          chardet
+          filelock
+          customPythonPackages.loguru
+          protobuf
+          pydantic
+          # pydub  # TODO: check if available
+          rich
+          toml
+          typing-extensions
+
+          # Version control
+          gitpython
+
+          # Database
+          sqlalchemy
+
+          #####################################################################
+          # PACKAGES FROM PAK7 (face analysis and utilities)
+          #####################################################################
+          # dlib  # TODO: check if available in nixpkgs
+          customPythonPackages.facexlib
+          customPythonPackages.insightface
+
+          #####################################################################
+          # Additional packages from python-packages.nix
+          #####################################################################
+          customPythonPackages.ftfy
         ]);
 
         #########################################################################
-        # BUILD DERIVATIONS - Build from source where needed
-        #########################################################################
-
-        # SAM-2 from source
-        sam2 = pkgs.stdenv.mkDerivation {
-          name = "sam2";
-          src = pkgs.fetchFromGitHub {
-            owner = "facebookresearch";
-            repo = "sam2";
-            rev = "main";  # TODO: pin to specific commit
-            sha256 = "sha256-0000000000000000000000000000000000000000000000000000";
-          };
-
-          buildInputs = [ pythonWithPackages ];
-
-          buildPhase = ''
-            export SAM2_BUILD_CUDA=1
-            ${pythonWithPackages}/bin/python setup.py build
-          '';
-
-          installPhase = ''
-            ${pythonWithPackages}/bin/pip install --no-deps --no-build-isolation -e . --prefix=$out
-          '';
-        };
-
-        # SAM-3 from source
-        sam3 = pkgs.stdenv.mkDerivation {
-          name = "sam3";
-          src = pkgs.fetchFromGitHub {
-            owner = "facebookresearch";
-            repo = "sam3";
-            rev = "main";
-            sha256 = "sha256-0000000000000000000000000000000000000000000000000000";
-          };
-
-          buildInputs = [ pythonWithPackages ];
-
-          buildPhase = ''
-            ${pythonWithPackages}/bin/python setup.py build
-          '';
-
-          installPhase = ''
-            ${pythonWithPackages}/bin/pip install --no-deps --no-build-isolation -e . --prefix=$out
-          '';
-        };
-
-        #########################################################################
-        # DOCKER LAYERS - Build incrementally
+        # DOCKER LAYERS - No fakeRootCommands needed!
         #########################################################################
 
         # Layer 0: Base system + CUDA
@@ -153,7 +175,7 @@
               # System utilities
               bash coreutils findutils gnugrep gnused gnutar gzip which
 
-              # CUDA (use symlinkJoin to avoid collisions)
+              # CUDA (merged to avoid collisions)
               (pkgs.symlinkJoin {
                 name = "cuda-merged";
                 paths = [
@@ -177,7 +199,7 @@
           ];
         };
 
-        # Layer 1: Python + system packages from nixpkgs
+        # Layer 1: Python with ALL packages (from Nix)
         layer1-python = pkgs.dockerTools.buildImage {
           name = "comfyui-layer1-python";
           tag = "latest";
@@ -186,7 +208,7 @@
           contents = pkgs.buildEnv {
             name = "python-env";
             paths = [
-              pythonWithPackages
+              pythonWithAllPackages
               pkgs.aria2
               pkgs.vim
               pkgs.fish
@@ -194,133 +216,66 @@
           };
 
           config.Env = [
-            "PYTHON=${python}/bin/python3"
+            "PYTHON=${pythonWithAllPackages}/bin/python3"
             "PYTHONUNBUFFERED=1"
-            "PATH=/usr/bin:/bin:${python}/bin"
+            "PATH=/usr/bin:/bin:${pythonWithAllPackages}/bin"
           ];
         };
 
-        # Layer 2: Downloaded wheels (no build, just copy)
-        layer2-wheels = pkgs.dockerTools.buildImage {
-          name = "comfyui-layer2-wheels";
+        # Layer 2: ComfyUI application files
+        layer2-app = pkgs.dockerTools.buildImage {
+          name = "comfyui-layer2-app";
           tag = "latest";
           fromImage = layer1-python;
 
-          copyToRoot = pkgs.runCommand "wheels-dir" {} ''
-            mkdir -p $out/opt/wheels/pytorch
-            mkdir -p $out/opt/wheels/perf
+          copyToRoot = pkgs.runCommand "app-scripts" {} ''
+            mkdir -p $out/builder-scripts
+            mkdir -p $out/runner-scripts
+            mkdir -p $out/default-comfyui-bundle
 
-            # Copy PyTorch wheels
-            cp ${pytorchWheels.torch} $out/opt/wheels/pytorch/torch.whl
-            cp ${pytorchWheels.torchvision} $out/opt/wheels/pytorch/torchvision.whl
-            cp ${pytorchWheels.torchaudio} $out/opt/wheels/pytorch/torchaudio.whl
+            # Copy builder scripts
+            ${pkgs.rsync}/bin/rsync -av ${./builder-scripts}/ $out/builder-scripts/
+            chmod +x $out/builder-scripts/*.sh
 
-            # Copy performance wheels
-            cp ${perfWheels.flashAttn} $out/opt/wheels/perf/flash_attn.whl
-            cp ${perfWheels.sageattention} $out/opt/wheels/perf/sageattention.whl
-            cp ${perfWheels.nunchaku} $out/opt/wheels/perf/nunchaku.whl
+            # Copy runner scripts
+            ${pkgs.rsync}/bin/rsync -av ${./runner-scripts}/ $out/runner-scripts/
+            chmod +x $out/runner-scripts/*.sh
           '';
+
+          # No fakeRootCommands! Everything is already in the Python environment
+          config.Env = [
+            "PYTHONUNBUFFERED=1"
+            "PATH=/usr/bin:/bin:${pythonWithAllPackages}/bin"
+          ];
         };
 
-        # Layer 3: PyTorch installed (from local wheels)
-        layer3-pytorch = pkgs.dockerTools.buildImage {
-          name = "comfyui-layer3-pytorch";
+        # Layer 3: ComfyUI setup (download and configure)
+        layer3-comfyui = pkgs.dockerTools.buildImage {
+          name = "comfyui-layer3-comfyui";
           tag = "latest";
-          fromImage = layer2-wheels;
+          fromImage = layer2-app;
 
-          # Use fakeRootCommands instead of runAsRoot (no VM!)
-          fakeRootCommands = ''
-            # Install PyTorch from pre-downloaded wheels
-            ${pythonWithPackages}/bin/pip install --no-cache-dir \
-              --no-index \
-              --find-links /opt/wheels/pytorch \
-              torch torchvision torchaudio
+          # This still needs to run setup script, but no pip installs!
+          # The setup script will:
+          # 1. Clone ComfyUI
+          # 2. Clone custom nodes
+          # 3. Clone models (if needed)
+          # 4. Configure settings
+          # NO pip install needed - all packages from Nix!
 
-            # Verify installation
-            ${pythonWithPackages}/bin/python -c "import torch; print(f'PyTorch {torch.__version__} with CUDA {torch.version.cuda}')"
-          '';
+          config.Env = [
+            "PYTHONUNBUFFERED=1"
+            "PATH=/usr/bin:/bin:${pythonWithAllPackages}/bin"
+          ];
         };
 
-        # Layer 4: Additional dependencies from nixpkgs + remaining pip packages
-        layer4-deps = pkgs.dockerTools.buildImage {
-          name = "comfyui-layer4-deps";
-          tag = "latest";
-          fromImage = layer3-pytorch;
-
-          copyToRoot = pkgs.buildEnv {
-            name = "deps-env";
-            paths = [
-              sam2
-              sam3
-            ];
-          };
-
-          # Copy scripts
-          extraCommands = ''
-            mkdir -p builder-scripts
-            cp -r ${./builder-scripts}/* builder-scripts/
-            chmod +x builder-scripts/*.sh
-          '';
-
-          fakeRootCommands = ''
-            # Install remaining packages from pak files that aren't in nixpkgs
-            # Filter out packages we already have from Nix
-            ${pythonWithPackages}/bin/pip install --no-cache-dir -r /builder-scripts/pak3.txt || true
-            ${pythonWithPackages}/bin/pip install --no-cache-dir -r /builder-scripts/pak5.txt || true
-            ${pythonWithPackages}/bin/pip install --no-cache-dir -r /builder-scripts/pak7.txt || true
-          '';
-        };
-
-        # Layer 5: Performance wheels installed
-        layer5-perf = pkgs.dockerTools.buildImage {
-          name = "comfyui-layer5-perf";
-          tag = "latest";
-          fromImage = layer4-deps;
-
-          fakeRootCommands = ''
-            # Install performance wheels from pre-downloaded files
-            ${pythonWithPackages}/bin/pip install --no-cache-dir \
-              --no-index \
-              --find-links /opt/wheels/perf \
-              flash-attn sageattention nunchaku
-
-            # Verify
-            ${pythonWithPackages}/bin/pip list | grep -E "(flash-attn|sageattention|nunchaku)"
-          '';
-        };
-
-        # Layer 6: ComfyUI application
-        layer6-app = pkgs.dockerTools.buildImage {
-          name = "comfyui-layer6-app";
-          tag = "latest";
-          fromImage = layer5-perf;
-
-          extraCommands = ''
-            mkdir -p runner-scripts default-comfyui-bundle
-            cp -r ${./runner-scripts}/* runner-scripts/
-            chmod +x runner-scripts/*.sh
-          '';
-
-          fakeRootCommands = ''
-            # Setup ComfyUI
-            cd /default-comfyui-bundle
-            bash /builder-scripts/preload-cache.sh
-
-            # Install ComfyUI requirements
-            ${pythonWithPackages}/bin/pip install --no-cache-dir \
-              -r /default-comfyui-bundle/ComfyUI/requirements.txt \
-              -r /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager/requirements.txt
-
-            # Final package list
-            ${pythonWithPackages}/bin/pip list > /package-list.txt
-          '';
-        };
-
-        # Final image: Combine all layers with proper config
-        finalImage = pkgs.dockerTools.buildImage {
+        # Final image: Combine with proper runtime config
+        finalImage = pkgs.dockerTools.streamLayeredImage {
           name = "comfyui-boot";
           tag = "cu130-megapak-py314-nix";
-          fromImage = layer6-app;
+          fromImage = layer3-comfyui;
+
+          contents = [ pythonWithAllPackages ];
 
           config = {
             Cmd = [ "${pkgs.bash}/bin/bash" "/runner-scripts/entrypoint.sh" ];
@@ -331,7 +286,8 @@
             Env = [
               "CLI_ARGS="
               "PYTHONUNBUFFERED=1"
-              "PATH=/usr/bin:/bin:${python}/bin"
+              "PATH=/usr/bin:/bin:${pythonWithAllPackages}/bin"
+              "PYTHON=${pythonWithAllPackages}/bin/python3"
             ];
             Volumes = {
               "/root" = {};
@@ -342,12 +298,14 @@
       in {
         packages = {
           # Individual layers for incremental building
-          inherit layer0-base layer1-python layer2-wheels
-                  layer3-pytorch layer4-deps layer5-perf layer6-app;
+          inherit layer0-base layer1-python layer2-app layer3-comfyui;
 
           # Final image
           comfyui = finalImage;
           default = finalImage;
+
+          # Expose custom Python packages for debugging
+          inherit customPythonPackages pythonWithAllPackages;
         };
 
         # Apps for building layers incrementally
@@ -362,28 +320,16 @@
               nix build .#layer0-base
               docker load < result
 
-              echo "Building Layer 1: Python + nixpkgs packages..."
+              echo "Building Layer 1: Python + ALL packages (from Nix)..."
               nix build .#layer1-python
               docker load < result
 
-              echo "Building Layer 2: Download wheels..."
-              nix build .#layer2-wheels
+              echo "Building Layer 2: Application scripts..."
+              nix build .#layer2-app
               docker load < result
 
-              echo "Building Layer 3: Install PyTorch..."
-              nix build .#layer3-pytorch
-              docker load < result
-
-              echo "Building Layer 4: Dependencies..."
-              nix build .#layer4-deps
-              docker load < result
-
-              echo "Building Layer 5: Performance wheels..."
-              nix build .#layer5-perf
-              docker load < result
-
-              echo "Building Layer 6: ComfyUI app..."
-              nix build .#layer6-app
+              echo "Building Layer 3: ComfyUI setup..."
+              nix build .#layer3-comfyui
               docker load < result
 
               echo "Building final image..."
@@ -391,15 +337,61 @@
               ./result | docker load
 
               echo "Done! Image: comfyui-boot:cu130-megapak-py314-nix"
+              echo ""
+              echo "Verify packages:"
+              docker run --rm comfyui-boot:cu130-megapak-py314-nix python -c "import torch; print(f'PyTorch {torch.__version__} CUDA {torch.version.cuda}')"
             '');
           };
+
+          # Helper to verify Python environment
+          check-packages = {
+            type = "app";
+            program = toString (pkgs.writeScript "check-packages" ''
+              #!${pkgs.bash}/bin/bash
+              echo "Python environment packages:"
+              ${pythonWithAllPackages}/bin/python -c "import sys; print('\n'.join(sorted(sys.path)))"
+              echo ""
+              echo "Installed packages:"
+              ${pythonWithAllPackages}/bin/python -m pip list
+            '');
+          };
+        };
+
+        # Development shell
+        devShells.default = pkgs.mkShell {
+          buildInputs = [
+            pythonWithAllPackages
+            pkgs.nix-prefetch-git
+            pkgs.nix-prefetch-scripts
+          ];
+
+          shellHook = ''
+            echo "ComfyUI Nix Development Environment"
+            echo "Python: ${pythonWithAllPackages}/bin/python3"
+            echo ""
+            echo "Available commands:"
+            echo "  nix run .#build-incremental  - Build Docker image incrementally"
+            echo "  nix run .#check-packages     - Verify Python environment"
+            echo "  nix-prefetch-url <url>       - Get hash for wheel URLs"
+            echo ""
+          '';
         };
       }
     );
 }
 
-# How to use:
-# 1. Fill in sha256 hashes using: nix-prefetch-url <url>
-# 2. Build incrementally: nix run .#build-incremental
-# 3. Or build specific layer: nix build .#layer3-pytorch
-# 4. Each layer is cached independently!
+# Pure Nix Approach - Key Benefits:
+#
+# ✅ NO pip installs during build
+# ✅ NO fakeRootCommands needed
+# ✅ Fully reproducible (all packages from Nix)
+# ✅ Better caching (Nix knows exact dependencies)
+# ✅ Garbage collection (old versions cleaned automatically)
+# ✅ Can use nix-shell for local development
+# ✅ Dependency tracking (Nix manages the DAG)
+#
+# TODO:
+# 1. Fill in sha256 hashes in python-packages.nix
+# 2. Expand python-packages.nix with remaining packages from pak files
+# 3. Verify package availability in nixpkgs (check comments above)
+# 4. Test build: nix run .#build-incremental
