@@ -20,7 +20,7 @@ rec {
     build-system = with pythonPackages; [ setuptools ];
     src = pythonPackages.fetchPypi {
       inherit pname version;
-      sha256 = "1pwdxvyfl2sl47cr8zcw9klql6sbjq9bhinyzg6yfdzqijavn75y";
+      hash = "sha256-A+Fh/GnUldryubXI1bQ9BuIUVSDARye1vaVtSfGkOrU=";
     };
     propagatedBuildInputs = with pythonPackages; [ numpy pyyaml psutil ];
   };
