@@ -86,11 +86,11 @@ jobs:
           echo "comfyui_version=${COMFYUI_VERSION}" >> $GITHUB_OUTPUT
 
           # Extract ComfyUI Manager version
-          MANAGER_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 bash -c "cd /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager && git describe --tags --always" || echo "unknown")
+          MANAGER_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 bash -c "cd /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager && (git describe --tags 2>/dev/null || git tag --sort=-v:refname | head -1 || echo \"commit-\$(git rev-parse --short HEAD)\")" || echo "unknown")
           echo "manager_version=${MANAGER_VERSION}" >> $GITHUB_OUTPUT
 
           # Extract Frontend version
-          FRONTEND_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 bash -c "cd /default-comfyui-bundle/ComfyUI/web && git describe --tags --always" || echo "unknown")
+          FRONTEND_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 bash -c "cd /default-comfyui-bundle/ComfyUI/web && (git describe --tags 2>/dev/null || git tag --sort=-v:refname | head -1 || echo \"commit-\$(git rev-parse --short HEAD)\")" || echo "unknown")
           echo "frontend_version=${FRONTEND_VERSION}" >> $GITHUB_OUTPUT
 
           # Count custom nodes
@@ -169,10 +169,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: cu130-megapak-py314-${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
-          name: ComfyUI cu130-megapak-py314 - ${{ steps.versions.outputs.version_tag }}
+          name: ComfyUI ${{ steps.versions.outputs.comfyui_version }} Docker Image - CUDA 13.0 Megapak (Python 3.14)
           body: |
-            # ComfyUI Docker Image - CUDA 13.0 Megapak (Python 3.14)
-
             ## Core Versions
             - **Python**: ${{ steps.versions.outputs.python_version }} (free-threaded, no GIL)
             - **PyTorch**: ${{ steps.versions.outputs.pytorch_version }}
