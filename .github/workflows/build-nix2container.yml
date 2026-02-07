@@ -13,7 +13,7 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-slim  # Lighter runner, uses containers instead of VMs
+    runs-on: ubuntu-latest  # Full VM with loop devices for disk optimization
     timeout-minutes: 360  # Maximum timeout (6 hours) - large Nix builds need time
     permissions:
       contents: read
@@ -35,8 +35,8 @@ jobs:
           docker-images: true
           swap-storage: false  # Keep swap for large builds
 
-      # ✅ Nix-specific optimization (removes everything except Nix)
-      # Note: easimon/maximize-build-space doesn't work on ubuntu-slim (needs loop devices + LVM)
+      # ✅ Nix-specific optimization - must run BEFORE Install Nix
+      # Creates optimized btrfs volume on /nix using /mnt space
       - name: Nothing but Nix
         uses: wimpysworld/nothing-but-nix@main
 
@@ -80,11 +80,25 @@ jobs:
           nix eval .#comfyui.imageName
           nix eval .#comfyui.imageTag
 
+      - name: Show build dependencies
+        working-directory: cu130-megapak-pt210-py314-nix
+        run: |
+          echo "📦 Checking what needs to be built..."
+          nix path-info .#comfyui --derivation
+
+      - name: Show derivation details
+        working-directory: cu130-megapak-pt210-py314-nix
+        run: |
+          echo "🔍 Derivation structure:"
+          nix show-derivation .#comfyui | jq -r 'to_entries | .[0] | .value | {name: .outputs, builder: .builder, args: .args[:5]}' || nix show-derivation .#comfyui | head -50
+
       - name: Build ComfyUI image
         working-directory: cu130-megapak-pt210-py314-nix
         run: |
           echo "🔨 Building ComfyUI image with nix2container..."
+          echo "⏰ Build started at: $(date)"
           nix build .#comfyui --print-build-logs
+          echo "✅ Build completed at: $(date)"
 
       - name: Verify build result
         working-directory: cu130-megapak-pt210-py314-nix
