@@ -214,11 +214,14 @@ while IFS=: read -r package hash; do
         continue
     fi
 
+    # Remove "sha256-" prefix if present (nix-prefetch-url returns base32 hash)
+    hash_plain="${hash#sha256-}"
+
     # Different sed patterns for different package types
     case "$package" in
         torch|torchvision|torchaudio|flash-attn|sageattention|nunchaku)
-            # For wheel packages: look for hash = "..."
-            if sed -i "/$package = buildWheel {/,/};/s|hash = \".*\";|hash = \"$hash\";|" "$TARGET_FILE" 2>/dev/null; then
+            # For wheel packages: look for sha256 = "..."
+            if sed -i "/$package = buildWheel {/,/};/s|sha256 = \".*\";|sha256 = \"$hash_plain\";|" "$TARGET_FILE" 2>/dev/null; then
                 echo "  ✅ Updated $package"
                 ((updated_count++))
             else
@@ -227,7 +230,7 @@ while IFS=: read -r package hash; do
             ;;
         clip|cozy-comfyui|cozy-comfy|cstr|ffmpy|img2texture)
             # For git packages: look for sha256 = "..."
-            if sed -i "/$package = buildFromGit {/,/};/s|sha256 = \".*\";|sha256 = \"$hash\";|" "$TARGET_FILE" 2>/dev/null; then
+            if sed -i "/$package = buildFromGit {/,/};/s|sha256 = \".*\";|sha256 = \"$hash_plain\";|" "$TARGET_FILE" 2>/dev/null; then
                 echo "  ✅ Updated $package"
                 ((updated_count++))
             else
@@ -236,7 +239,7 @@ while IFS=: read -r package hash; do
             ;;
         *)
             # For PyPI packages: look for sha256 = "..."
-            if sed -i "/$package = pythonPackages.buildPythonPackage/,/};/s|sha256 = \".*\";|sha256 = \"$hash\";|" "$TARGET_FILE" 2>/dev/null; then
+            if sed -i "/$package = pythonPackages.buildPythonPackage/,/};/s|sha256 = \".*\";|sha256 = \"$hash_plain\";|" "$TARGET_FILE" 2>/dev/null; then
                 echo "  ✅ Updated $package"
                 ((updated_count++))
             else
