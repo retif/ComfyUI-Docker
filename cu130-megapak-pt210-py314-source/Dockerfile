@@ -4,6 +4,7 @@
 # Using CUDA 13.0, Python 3.14 (free-threaded, compiled from source), GCC 15.
 # Using glibc 2.40 (from openSUSE Leap 16.0).
 # Python 3.14 built from source with --disable-gil flag.
+# Updated: 2026-02-08 - Fixed workflow paths configuration
 ################################################################################
 
 FROM docker.io/opensuse/leap:16.0
