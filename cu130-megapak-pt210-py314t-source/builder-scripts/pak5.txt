@@ -25,8 +25,7 @@ importlib-metadata
 iopath
 loguru
 mss
-# DISABLED: depends on llvmlite (no cp314t support)
-# numba
+numba
 numexpr
 peft
 piexif
@@ -40,8 +39,7 @@ pydantic-settings
 pydantic
 pydub
 PyGithub
-# DISABLED: depends on numba which depends on llvmlite (no cp314t support)
-# pymatting
+pymatting
 pynvml
 python-dateutil
 pyyaml

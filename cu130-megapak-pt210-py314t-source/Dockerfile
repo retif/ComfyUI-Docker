@@ -276,6 +276,12 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install https://github.com/retif/pytorch-wheels-builder/releases/download/cupy-cuda13x-v14.0.0rc1-py314t-torch2.10.0-cu130/cupy-14.0.0rc1-cp314-cp314t-linux_x86_64.whl
 
+# Install llvmlite from custom-built wheel for free-threaded Python 3.14 (cp314t)
+# Required by numba which is needed by pymatting and other packages in pak5.txt
+# Using wheel from https://github.com/retif/pytorch-wheels-builder
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install https://github.com/retif/pytorch-wheels-builder/releases/download/llvmlite-v0.44.0-py314t-llvm15/llvmlite-0.44.0%2B0.g2c67a6b8.dirty-cp314-cp314t-linux_x86_64.whl
+
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install \
         -r /builder-scripts/pak5.txt
