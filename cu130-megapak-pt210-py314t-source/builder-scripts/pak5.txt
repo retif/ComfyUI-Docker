@@ -30,7 +30,8 @@ mss
 numexpr
 peft
 piexif
-pixeloe
+# DISABLED: depends on opencv-python (no cp314t wheels)
+# pixeloe
 protobuf
 psutil
 py-cpuinfo
