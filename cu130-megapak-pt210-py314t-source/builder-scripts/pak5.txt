@@ -40,7 +40,8 @@ pydantic-settings
 pydantic
 pydub
 PyGithub
-pymatting
+# DISABLED: depends on numba which depends on llvmlite (no cp314t support)
+# pymatting
 pynvml
 python-dateutil
 pyyaml
