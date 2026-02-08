@@ -270,15 +270,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install \
         -r /builder-scripts/pak3.txt
 
-# CuPy: NOT AVAILABLE for free-threaded Python 3.14 (cp314t) yet
-# - CuPy v14.0.0rc1 has cp314 wheels (standard Python with GIL)
-# - No cp314t wheels (free-threaded, no GIL) available yet
-# - Building from source would require CUDA toolkit and is very slow
-# - Will re-enable when CuPy releases free-threaded Python 3.14 wheels
-#
-# Affected nodes: Frame Interpolation nodes that depend on CuPy
-# RUN --mount=type=cache,target=/root/.cache/pip \
-#     pip install cupy-cuda13x --pre -U -f https://pip.cupy.dev/pre
+# Install CuPy from custom-built wheel for free-threaded Python 3.14 (cp314t)
+# Official CuPy v14.0.0rc1 only has cp314 (standard Python with GIL)
+# Using wheel from https://github.com/retif/pytorch-wheels-builder
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install https://github.com/retif/pytorch-wheels-builder/releases/download/cupy-cuda13x-v14.0.0rc1-py314t-torch2.10.0-cu130/cupy-14.0.0rc1-cp314-cp314t-linux_x86_64.whl
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install \
