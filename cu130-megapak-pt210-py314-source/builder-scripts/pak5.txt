@@ -1,6 +1,7 @@
 addict
 aiohttp
-albumentations
+# DISABLED: depends on opencv-python-headless (no cp314t wheels)
+# albumentations
 alembic
 av
 black
@@ -24,7 +25,8 @@ importlib-metadata
 iopath
 loguru
 mss
-numba
+# DISABLED: depends on llvmlite (no cp314t support)
+# numba
 numexpr
 peft
 piexif
@@ -42,7 +44,8 @@ pynvml
 python-dateutil
 pyyaml
 qrcode[pil]
-rembg
+# DISABLED: depends on opencv-python (no cp314t wheels)
+# rembg
 requirements-parser
 rich
 rich-argparse
@@ -59,11 +62,13 @@ toml
 tomli
 torchsde
 tqdm
-transparent-background
+# DISABLED: depends on opencv-python (no cp314t wheels)
+# transparent-background
 trimesh[easy]
 typer
 typing-extensions
-ultralytics
+# DISABLED: depends on opencv-python (no cp314t wheels)
+# ultralytics
 uv
 webcolors
 yacs
