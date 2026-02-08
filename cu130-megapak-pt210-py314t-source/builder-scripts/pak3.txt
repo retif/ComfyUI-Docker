@@ -11,11 +11,12 @@ nvidia-ml-py
 omegaconf
 onnx
 onnxruntime-gpu
-# OpenCV packages - available for standard Python 3.14 (cp314)
-opencv-contrib-python
-opencv-contrib-python-headless
-opencv-python
-opencv-python-headless
+# TEMPORARILY COMMENTED: No wheels available for Python 3.14 yet
+# Will re-enable when opencv-python releases Python 3.14 wheels
+# opencv-contrib-python
+# opencv-contrib-python-headless
+# opencv-python
+# opencv-python-headless
 pandas
 pilgram
 pillow

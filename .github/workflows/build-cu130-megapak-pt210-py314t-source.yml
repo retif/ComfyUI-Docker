@@ -1,21 +1,18 @@
-name: Publish 'cu130-megapak-pt210-py314' to GHCR
+name: Publish 'cu130-megapak-pt210-py314t-source' to GHCR
 
 on:
   workflow_dispatch: # Can be manually triggered
-  schedule: # Runs on every Monday & Friday, 07:00 UTC
-    - cron: '0 7 * * 1,5'
   push:
     branches: [ main ]
-    paths-ignore:
-      - '**'
-      - '!cu130-megapak-pt210-py314/Dockerfile'
-      - '!cu130-megapak-pt210-py314/builder-scripts/**'
-      - '!cu130-megapak-pt210-py314/runner-scripts/**'
-      - '!.github/workflows/build-cu130-megapak-pt210-py314.yml'
+    paths:
+      - 'cu130-megapak-pt210-py314t-source/Dockerfile'
+      - 'cu130-megapak-pt210-py314t-source/builder-scripts/**'
+      - 'cu130-megapak-pt210-py314t-source/runner-scripts/**'
+      - '.github/workflows/build-cu130-megapak-pt210-py314t-source.yml'
 
 jobs:
 
-  build-test-publish-cu130-megapak-pt210-py314:
+  build-test-publish-cu130-megapak-pt210-py314t-source:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -47,6 +44,7 @@ jobs:
       -
         name: Git checkout
         uses: actions/checkout@v6
+
       -
         name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -54,27 +52,34 @@ jobs:
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       -
-        name: Build 'cu130-megapak-pt210-py314'
+        name: Build 'cu130-megapak-pt210-py314t-source'
         uses: docker/build-push-action@v6
         with:
-          context: ./cu130-megapak-pt210-py314
-          file: ./cu130-megapak-pt210-py314/Dockerfile
+          context: ./cu130-megapak-pt210-py314t-source
+          file: ./cu130-megapak-pt210-py314t-source/Dockerfile
           build-args: |
             USING_GITHUB_ACTIONS=true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314
-            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314-${{ steps.date.outputs.date }}
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source-${{ steps.date.outputs.date }}
+          # Layer caching - pulls from registry if available
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/comfyui-boot:buildcache-py314t-source
+            type=gha
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/comfyui-boot:buildcache-py314t-source,mode=max
+            type=gha,mode=max
           load: true
       -
         name: Extract version information
         id: versions
         run: |
           # Extract Python version
-          PYTHON_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 python3 --version | awk '{print $2}')
+          PYTHON_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source python3 --version | awk '{print $2}')
           echo "python_version=${PYTHON_VERSION}" >> $GITHUB_OUTPUT
 
           # Extract PyTorch version
-          PYTORCH_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 pip show torch | grep '^Version:' | awk '{print $2}')
+          PYTORCH_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source pip show torch | grep '^Version:' | awk '{print $2}')
           echo "pytorch_version=${PYTORCH_VERSION}" >> $GITHUB_OUTPUT
 
           # CUDA version (hardcoded as 13.0 for this build)
@@ -82,40 +87,39 @@ jobs:
           echo "cuda_version=${CUDA_VERSION}" >> $GITHUB_OUTPUT
 
           # Extract ComfyUI version
-          COMFYUI_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 bash -c "cd /default-comfyui-bundle/ComfyUI && git describe --tags --always" || echo "unknown")
+          COMFYUI_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source bash -c "cd /default-comfyui-bundle/ComfyUI && git describe --tags --always" || echo "unknown")
           echo "comfyui_version=${COMFYUI_VERSION}" >> $GITHUB_OUTPUT
 
           # Extract ComfyUI Manager version (now cloned with tags)
-          MANAGER_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 bash -c "cd /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager && git config --global --add safe.directory /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager && (git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)" 2>/dev/null || echo "unknown")
+          MANAGER_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source bash -c "cd /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager && git config --global --add safe.directory /default-comfyui-bundle/ComfyUI/custom_nodes/ComfyUI-Manager && (git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)" 2>/dev/null || echo "unknown")
           echo "manager_version=${MANAGER_VERSION}" >> $GITHUB_OUTPUT
 
           # Extract Frontend version from pip package (web/ is just compiled output)
-          FRONTEND_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 pip show comfyui_frontend_package 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "unknown")
+          FRONTEND_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source pip show comfyui_frontend_package 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "unknown")
           echo "frontend_version=${FRONTEND_VERSION}" >> $GITHUB_OUTPUT
 
           # Count custom nodes
-          CUSTOM_NODES_COUNT=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 bash -c "ls -1d /default-comfyui-bundle/ComfyUI/custom_nodes/*/ 2>/dev/null | wc -l" || echo "0")
+          CUSTOM_NODES_COUNT=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source bash -c "ls -1d /default-comfyui-bundle/ComfyUI/custom_nodes/*/ 2>/dev/null | wc -l" || echo "0")
           echo "custom_nodes_count=${CUSTOM_NODES_COUNT}" >> $GITHUB_OUTPUT
 
           # Extract all ComfyUI-related pip packages
-          COMFYUI_PACKAGES=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 bash -c "pip list | grep -i comfyui | awk '{print \"- **\" \$1 \"**: \" \$2}'" || echo "")
-          # Use EOF delimiter to preserve multiline output
+          COMFYUI_PACKAGES=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source bash -c "pip list | grep -i comfyui | awk '{print \"- **\" \$1 \"**: \" \$2}'" || echo "")
           echo "comfyui_packages<<EOF" >> $GITHUB_OUTPUT
           echo "${COMFYUI_PACKAGES}" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
           # Extract key performance package versions
-          FLASH_ATTN_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 pip show flash-attn 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
+          FLASH_ATTN_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source pip show flash-attn 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
           echo "flash_attn_version=${FLASH_ATTN_VERSION}" >> $GITHUB_OUTPUT
 
-          SAGE_ATTN_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 pip show sageattention 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
+          SAGE_ATTN_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source pip show sageattention 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
           echo "sage_attn_version=${SAGE_ATTN_VERSION}" >> $GITHUB_OUTPUT
 
-          NUNCHAKU_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 pip show nunchaku 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
+          NUNCHAKU_VERSION=$(docker run --rm ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source pip show nunchaku 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo "not installed")
           echo "nunchaku_version=${NUNCHAKU_VERSION}" >> $GITHUB_OUTPUT
 
           # Create version tag (CUDA version is already in PyTorch version)
-          VERSION_TAG="py${PYTHON_VERSION}-pt${PYTORCH_VERSION}-comfy${COMFYUI_VERSION}"
+          VERSION_TAG="py${PYTHON_VERSION}-pt${PYTORCH_VERSION}-comfy${COMFYUI_VERSION}-src"
           VERSION_TAG="${VERSION_TAG//+/-}"
           echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
 
@@ -131,19 +135,19 @@ jobs:
           echo "Nunchaku: ${NUNCHAKU_VERSION}"
           echo "Version Tag: ${VERSION_TAG}"
       -
-        name: Show 'cu130-megapak-pt210-py314' environment variables
+        name: Show environment variables
         run: |
           docker run --rm \
             --name show-env \
-            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314 \
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source \
             env
       -
-        name: Test 'cu130-megapak-pt210-py314'
+        name: Test 'cu130-megapak-pt210-py314t-source'
         run: |
           docker run --rm \
             --name comfyui-quick-test \
             -e CLI_ARGS="--quick-test-for-ci --cpu" \
-            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314-${{ steps.date.outputs.date }}
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source-${{ steps.date.outputs.date }}
       -
         name: Login to GitHub Container Registry
         uses: docker/login-action@v3
@@ -152,28 +156,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
-        name: Push 'cu130-megapak-pt210-py314' with version tags
+        name: Push with version tags
         uses: docker/build-push-action@v6
         with:
-          context: ./cu130-megapak-pt210-py314
-          file: ./cu130-megapak-pt210-py314/Dockerfile
+          context: ./cu130-megapak-pt210-py314t-source
+          file: ./cu130-megapak-pt210-py314t-source/Dockerfile
           build-args: |
             USING_GITHUB_ACTIONS=true
           tags:  |
-            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314
-            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314-${{ steps.date.outputs.date }}
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source
+            ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source-${{ steps.date.outputs.date }}
             ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}
             ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
+          # Reuse cache from first build (should be very fast)
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/comfyui-boot:buildcache-py314t-source
+            type=gha
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/comfyui-boot:buildcache-py314t-source,mode=max
+            type=gha,mode=max
           push: true
       -
         name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: cu130-megapak-py314-${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
-          name: ComfyUI ${{ steps.versions.outputs.comfyui_version }} Docker Image - CUDA 13.0 Megapak (Python 3.14)
+          tag_name: cu130-megapak-py314t-source-${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
+          name: ComfyUI ${{ steps.versions.outputs.comfyui_version }} Docker Image - CUDA 13.0 Megapak (Python 3.14 Free-Threaded (no GIL))
           body: |
             ## Core Versions
-            - **Python**: ${{ steps.versions.outputs.python_version }} (free-threaded, no GIL)
+            - **Python**: ${{ steps.versions.outputs.python_version }} (free-threaded, no GIL, compiled from source)
             - **PyTorch**: ${{ steps.versions.outputs.pytorch_version }}
             - **CUDA**: 13.0
             - **Build Date**: ${{ steps.date.outputs.date }}
@@ -204,14 +215,14 @@ jobs:
             docker pull ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
             ```
 
-            ### Pull latest py314 variant:
+            ### Pull latest py314t-source variant:
             ```bash
-            docker pull ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314
+            docker pull ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source
             ```
 
             ## All Available Tags
-            - `ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314` (rolling latest)
-            - `ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314-${{ steps.date.outputs.date }}`
+            - `ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source` (rolling latest)
+            - `ghcr.io/${{ github.repository_owner }}/comfyui-boot:cu130-megapak-pt210-py314t-source-${{ steps.date.outputs.date }}`
             - `ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}`
             - `ghcr.io/${{ github.repository_owner }}/comfyui-boot:${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}`
 

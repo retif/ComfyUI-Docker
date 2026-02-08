@@ -181,7 +181,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: cu130-megapak-py314-source-${{ steps.versions.outputs.version_tag }}-${{ steps.date.outputs.date }}
-          name: ComfyUI ${{ steps.versions.outputs.comfyui_version }} Docker Image - CUDA 13.0 Megapak (Python 3.14 Free-Threaded)
+          name: ComfyUI ${{ steps.versions.outputs.comfyui_version }} Docker Image - CUDA 13.0 Megapak (Python 3.14 Standard (with GIL))
           body: |
             ## Core Versions
             - **Python**: ${{ steps.versions.outputs.python_version }} (free-threaded, no GIL, compiled from source)

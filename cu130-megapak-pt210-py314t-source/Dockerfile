@@ -1,10 +1,10 @@
 ################################################################################
 # Dockerfile that builds 'yanwk/comfyui-boot:cu130-megapak-py314-source'
 # A runtime environment for https://github.com/comfyanonymous/ComfyUI
-# Using CUDA 13.0, Python 3.14 (standard with GIL, compiled from source), GCC 15.
+# Using CUDA 13.0, Python 3.14 (free-threaded, compiled from source), GCC 15.
 # Using glibc 2.40 (from openSUSE Leap 16.0).
-# Python 3.14 built from source with standard GIL enabled.
-# Updated: 2026-02-08 - Created standard Python 3.14 variant (cp314)
+# Python 3.14 built from source with --disable-gil flag.
+# Updated: 2026-02-08 - Fixed workflow paths configuration
 ################################################################################
 
 FROM docker.io/opensuse/leap:16.0
@@ -167,13 +167,14 @@ ncurses-devel \
 wget \
 ca-certificates
 
-# Download and compile Python 3.14 with standard GIL
+# Download and compile Python 3.14 with free-threading (--disable-gil)
 RUN cd /tmp \
     && wget https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tar.xz \
     && tar -xf Python-${PYTHON_VERSION}.tar.xz \
     && cd Python-${PYTHON_VERSION} \
     && ./configure \
         --enable-optimizations \
+        --disable-gil \
         --with-lto \
         --enable-shared \
         --prefix=/usr/local \
@@ -269,10 +270,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install \
         -r /builder-scripts/pak3.txt
 
-# Install CuPy from official release for standard Python 3.14 (cp314)
-# Using official wheel from CuPy v14.0.0rc1
+# Install CuPy from custom-built wheel for free-threaded Python 3.14 (cp314t)
+# Official CuPy v14.0.0rc1 only has cp314 (standard Python with GIL)
+# Using wheel from https://github.com/retif/pytorch-wheels-builder
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install https://github.com/cupy/cupy/releases/download/v14.0.0rc1/cupy_cuda13x-14.0.0rc1-cp314-cp314-manylinux2014_x86_64.whl
+    pip install https://github.com/retif/pytorch-wheels-builder/releases/download/cupy-cuda13x-v14.0.0rc1-py314t-torch2.10.0-cu130/cupy-14.0.0rc1-cp314-cp314t-linux_x86_64.whl
 
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install \
