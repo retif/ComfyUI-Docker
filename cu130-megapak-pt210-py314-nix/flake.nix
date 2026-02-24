@@ -2,13 +2,14 @@
   description = "ComfyUI Docker - Pure Nix build with nix2container (zero duplication)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    fleet.url = "git+https://git.oleks.space/oleks/fleet-nixpkgs";
+    nixpkgs.follows = "fleet/nixpkgs-projects";
     flake-utils.url = "github:numtide/flake-utils";
     nix2container.url = "github:nlewo/nix2container";
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils, nix2container }:
+  outputs = { self, nixpkgs, flake-utils, nix2container, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -16,11 +17,16 @@
           config = {
             allowUnfree = true;
             cudaSupport = true;
+            # Enable ccache for all C/C++ builds to preserve incremental build progress
+            # This will cache compiled objects across interrupted builds
+            replaceStdenv = { pkgs }: pkgs.ccacheStdenv;
           };
         };
 
         nix2containerPkgs = nix2container.packages.${system};
 
+        # Use CUDA 13.0 toolkit for environment, but torchvision/opencv may use CUDA 12.8
+        # PyTorch wheel is CUDA 13.0, which is the critical component
         python = pkgs.python314;
         cudaPackages = pkgs.cudaPackages_13_0;
 
@@ -128,10 +134,12 @@
           }
 
           # Layer 06: PyTorch ecosystem
+          # torch: CUDA 13.0 wheel (self-contained)
+          # torchvision: Skipped (avoid nixpkgs CUDA 12.8 conflicts)
+          # torchaudio: CUDA 13.0 wheel
           {
             deps = with python.pkgs; [
               customPackages.torch
-              torchvision
               customPackages.torchaudio
             ];
           }
@@ -154,7 +162,8 @@
               numpy scipy pillow imageio scikit-learn scikit-image matplotlib pandas seaborn
 
               # Computer vision
-              opencv4
+              # opencv4 from nixpkgs removed (CUDA 12.8 conflicts)
+              # Using opencv-contrib-python wheels from PyPI instead (CPU-only)
               pak3Packages.opencv-contrib-python
               pak3Packages.opencv-contrib-python-headless
               pak3Packages.kornia

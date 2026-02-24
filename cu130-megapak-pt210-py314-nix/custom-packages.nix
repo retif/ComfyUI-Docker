@@ -34,8 +34,7 @@ in rec {
     };
   };
 
-  # Note: torchvision available in nixpkgs, using that instead
-  # torchvision wheel has Access Denied from PyTorch CDN
+  # Note: torchvision from nixpkgs (CUDA 12.8) - torch wheel is self-contained so this works
 
   torchaudio = buildWheel {
     pname = "torchaudio";

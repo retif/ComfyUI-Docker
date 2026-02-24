@@ -17,9 +17,9 @@ rec {
 
   # PyTorch (Layer 4)
   pytorch = with ps; [
-    torchPackages.torch
-    torchvision
-    torchPackages.torchaudio
+    torchPackages.torch          # CUDA 13.0 wheel
+    # torchvision removed (CUDA 12.8 conflicts)
+    torchPackages.torchaudio     # CUDA 13.0 wheel
   ];
 
   # pak3 - Essentials (Layer 5)
@@ -34,9 +34,9 @@ rec {
     numpy scipy pillow imageio scikit-learn scikit-image matplotlib pandas
 
     # Computer vision
-    opencv4
-    pak3Packages.opencv-contrib-python
-    pak3Packages.opencv-contrib-python-headless
+    # opencv4 removed (CUDA 12.8 conflicts)
+    pak3Packages.opencv-contrib-python           # CPU-only PyPI wheel
+    pak3Packages.opencv-contrib-python-headless  # CPU-only PyPI wheel
     pak3Packages.kornia
 
     # ML utilities

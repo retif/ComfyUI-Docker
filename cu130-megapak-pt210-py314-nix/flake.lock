@@ -18,6 +18,48 @@
         "type": "github"
       }
     },
+    "fleet": {
+      "inputs": {
+        "nixpkgs": "nixpkgs",
+        "nixpkgs-armer": [
+          "fleet",
+          "nixpkgs"
+        ],
+        "nixpkgs-bim": [
+          "fleet",
+          "nixpkgs"
+        ],
+        "nixpkgs-howard": [
+          "fleet",
+          "nixpkgs"
+        ],
+        "nixpkgs-mermaid": [
+          "fleet",
+          "nixpkgs"
+        ],
+        "nixpkgs-micron": [
+          "fleet",
+          "nixpkgs"
+        ],
+        "nixpkgs-projects": [
+          "fleet",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1771939880,
+        "narHash": "sha256-iVZhK+khWMwm8fOdow8mSGqeqwVVgcxmsFwYdC0qDxw=",
+        "ref": "refs/heads/main",
+        "rev": "4e35d3eb6c803f07b4218317f56d2b8665f87a9a",
+        "revCount": 3,
+        "type": "git",
+        "url": "https://git.oleks.space/oleks/fleet-nixpkgs"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://git.oleks.space/oleks/fleet-nixpkgs"
+      }
+    },
     "nix2container": {
       "inputs": {
         "nixpkgs": [
@@ -40,25 +82,29 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1770197578,
-        "narHash": "sha256-AYqlWrX09+HvGs8zM6ebZ1pwUqjkfpnv8mewYwAo+iM=",
+        "lastModified": 1771848320,
+        "narHash": "sha256-0MAd+0mun3K/Ns8JATeHT1sX28faLII5hVLq0L3BdZU=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "00c21e4c93d963c50d4c0c89bfa84ed6e0694df2",
+        "rev": "2fc6539b481e1d2569f25f8799236694180c0993",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixos-unstable",
         "repo": "nixpkgs",
+        "rev": "2fc6539b481e1d2569f25f8799236694180c0993",
         "type": "github"
       }
     },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
+        "fleet": "fleet",
         "nix2container": "nix2container",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": [
+          "fleet",
+          "nixpkgs-projects"
+        ]
       }
     },
     "systems": {
