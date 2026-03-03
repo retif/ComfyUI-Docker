@@ -2,7 +2,7 @@
   description = "ComfyUI Docker - Pure Nix build with nix2container (zero duplication)";
 
   inputs = {
-    fleet.url = "git+https://git.oleks.space/oleks/fleet-nixpkgs";
+    fleet.url = "git+https://git.oleks.space/oleks/fleet-pins";
     nixpkgs.follows = "fleet/nixpkgs-projects";
     flake-utils.url = "github:numtide/flake-utils";
     nix2container.url = "github:nlewo/nix2container";
