@@ -29,6 +29,14 @@
           "fleet",
           "nixpkgs"
         ],
+        "nixpkgs-ci": [
+          "fleet",
+          "nixpkgs"
+        ],
+        "nixpkgs-emmett": [
+          "fleet",
+          "nixpkgs"
+        ],
         "nixpkgs-howard": [
           "fleet",
           "nixpkgs"
@@ -47,11 +55,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1771939880,
-        "narHash": "sha256-iVZhK+khWMwm8fOdow8mSGqeqwVVgcxmsFwYdC0qDxw=",
+        "lastModified": 1776894566,
+        "narHash": "sha256-oD0s9bTy8piFts/RcZhibytVoSu42/mItsvxH2icGMc=",
         "ref": "refs/heads/main",
-        "rev": "4e35d3eb6c803f07b4218317f56d2b8665f87a9a",
-        "revCount": 3,
+        "rev": "1550e5be0e89a6a1b084a5662ad37b35b6905e49",
+        "revCount": 10,
         "type": "git",
         "url": "https://git.oleks.space/oleks/fleet-pins"
       },
@@ -83,7 +91,7 @@
     "nixpkgs": {
       "locked": {
         "lastModified": 1771848320,
-        "narHash": "sha256-0MAd+0mun3K/Ns8JATeHT1sX28faLII5hVLq0L3BdZU=",
+        "narHash": "sha256-ppefbuGh9S1W3gNCvMPhsadn6FvshqaJAYRk1/N2JGY=",
         "owner": "NixOS",
         "repo": "nixpkgs",
         "rev": "2fc6539b481e1d2569f25f8799236694180c0993",
