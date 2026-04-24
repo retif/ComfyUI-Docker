@@ -95,7 +95,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install \
         --pre torch torchvision torchaudio \
         --index-url https://download.pytorch.org/whl/nightly/cu130 \
-    && find /usr/local/lib/python3.14t/dist-packages/nvidia/ -mindepth 1 -maxdepth 1 -exec rm -rfv {} +
+    && find /usr/local/lib/python3.14t/dist-packages/nvidia/ -mindepth 1 -maxdepth 1 \
+        -not -name 'nccl' -exec rm -rfv {} +
 
 ################################################################################
 # Bundle ComfyUI directly in /root
