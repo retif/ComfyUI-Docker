@@ -247,12 +247,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 # Install custom-built wheels from GitHub releases and artifacts
 # https://github.com/oleks/pytorch-wheels-builder
 
-# Install gh CLI for Flash Attention artifact download (no release for py313 yet)
-RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --gpg-auto-import-keys install --no-confirm --auto-agree-with-licenses gh
-
 RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=secret,id=GITHUB_TOKEN \
     pip install -U uv \
     # SageAttention v2.2.0 for Python 3.13 from GitHub release
     && pip install \
@@ -260,11 +255,9 @@ https://github.com/retif/pytorch-wheels-builder/releases/download/sageattention-
     # Nunchaku v1.0.2 for Python 3.13 from GitHub release
     && pip install \
 https://github.com/retif/pytorch-wheels-builder/releases/download/nunchaku-v1.0.2-py313-torch2.10.0-cu130/nunchaku-1.0.2%2Btorch2.10-cp313-cp313-linux_x86_64.whl \
-    # Flash Attention from GitHub Actions artifact (no py313 release yet)
-    && echo "$(cat /run/secrets/GITHUB_TOKEN)" | gh auth login --with-token \
-    && gh run download 21769440938 --repo retif/pytorch-wheels-builder --dir /tmp/flash-attn \
-    && pip install /tmp/flash-attn/*/*.whl \
-    && rm -rf /tmp/flash-attn
+    # Flash Attention v2.8.2 for Python 3.13 from GitHub release
+    && pip install \
+https://github.com/retif/pytorch-wheels-builder/releases/download/flash-attn-v2.8.2-py313-torch2.10.0-cu130/flash_attn-2.8.2-cp313-cp313-linux_x86_64.whl
 
 ################################################################################
 # Bundle ComfyUI and ~47 custom nodes

@@ -38,7 +38,7 @@ python312-matplotlib \
 python312-mpmath \
 python312-numba-devel \
 # python312-numpy \ # Numba conflicts with latest NumPy
-python312-onnx \
+# python312-onnx \ # Broken: requires libprotobuf.so.33.3.0 not yet in openSUSE Tumbleweed
 python312-opencv \
 python312-pandas \
 python312-qrcode \

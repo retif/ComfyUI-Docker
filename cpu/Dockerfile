@@ -30,7 +30,7 @@ python313-matplotlib \
 python313-mpmath \
 python313-numba-devel \
 # python313-numpy \ # Latest NumPy conflicts with Numba
-python313-onnx \
+# python313-onnx \ # Broken: requires libprotobuf.so.33.3.0 not yet in openSUSE Tumbleweed
 python313-pandas \
 python313-scikit-build \
 python313-scikit-build-core-pyproject \
