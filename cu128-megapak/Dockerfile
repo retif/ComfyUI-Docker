@@ -97,20 +97,7 @@ RUN --mount=type=cache,target=/var/cache/zypp \
 python312-devel \
 python312-pip \
 python312-wheel \
-python312-setuptools \
-python312-Cython \
-python312-py-build-cmake \
-python312-matplotlib \
-python312-mpmath \
-python312-numba-devel \
-# python312-numpy \ # Numba conflicts with latest NumPy
-# python312-onnx \ # Broken: requires libprotobuf.so.33.3.0 not yet in openSUSE Tumbleweed
-python312-pandas \
-python312-scikit-build \
-python312-scikit-build-core-pyproject \
-python312-scikit-image \
-python312-scikit-learn \
-python312-scipy
+python312-setuptools
 
 RUN --mount=type=cache,target=/var/cache/zypp \
     zypper --gpg-auto-import-keys \
@@ -237,6 +224,20 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     && pip install \
         --dry-run xformers==0.0.34 torchvision torchaudio \
         --index-url https://download.pytorch.org/whl/cu128
+
+# Build tools and Python packages no longer available as zypper packages
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install \
+        Cython \
+        py-build-cmake \
+        scikit-build \
+        scikit-build-core \
+        matplotlib \
+        mpmath \
+        pandas \
+        scikit-image \
+        scikit-learn \
+        scipy
 
 # Here's some hack. To reduce image size & single layer size, we:
 # 1. Install PyTorch and all its dependencies.

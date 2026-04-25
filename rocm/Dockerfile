@@ -27,8 +27,6 @@ python312-devel \
 python312-pip \
 python312-wheel \
 python312-setuptools \
-python312-Cython \
-python312-py-build-cmake \
 python312-aiohttp \
 python312-dbm \
 python312-ffmpeg-python \
@@ -36,20 +34,9 @@ python312-GitPython \
 python312-httpx \
 python312-joblib \
 python312-lark \
-python312-matplotlib \
-python312-mpmath \
-python312-numba-devel \
-# python312-numpy \ # Numba conflicts with latest NumPy
-# python312-onnx \ # Broken: requires libprotobuf.so.33.3.0 not yet in openSUSE Tumbleweed
 python312-opencv \
-python312-pandas \
 python312-qrcode \
 python312-rich \
-python312-scikit-build \
-python312-scikit-build-core-pyproject \
-python312-scikit-image \
-python312-scikit-learn \
-python312-scipy \
 python312-svglib \
 python312-tqdm \
     && rm /usr/lib64/python3.12/EXTERNALLY-MANAGED \
@@ -110,6 +97,20 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip list \
     && pip install \
         --upgrade pip wheel setuptools
+
+# Build tools and Python packages no longer available as zypper packages
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install \
+        Cython \
+        py-build-cmake \
+        scikit-build \
+        scikit-build-core \
+        matplotlib \
+        mpmath \
+        pandas \
+        scikit-image \
+        scikit-learn \
+        scipy
 
 # PyTorch ROCm
 # Ref: https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/native_linux/install-pytorch.html
