@@ -26,7 +26,8 @@ python312-wheel \
 python312-setuptools
 
 RUN --mount=type=cache,target=/var/cache/zypp \
-    zypper --gpg-auto-import-keys \
+    zypper --gpg-auto-import-keys refresh \
+    && zypper --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
 python312-opencv \
 opencv \
