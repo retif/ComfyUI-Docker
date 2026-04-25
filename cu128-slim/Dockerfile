@@ -29,7 +29,6 @@ RUN --mount=type=cache,target=/var/cache/zypp \
     zypper --gpg-auto-import-keys refresh \
     && zypper --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
-python312-opencv \
 opencv \
 opencv-devel \
 Mesa-libGL1 \
@@ -40,14 +39,9 @@ libQt5OpenGL5
 RUN --mount=type=cache,target=/var/cache/zypp \
     zypper --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
-python312-ffmpeg-python \
-python312-imageio \
-python312-svglib \
 ffmpeg \
 x264 \
 x265 \
-python312-GitPython \
-python312-pygit2 \
 git
 
 RUN --mount=type=cache,target=/var/cache/zypp \
@@ -115,12 +109,14 @@ RUN --mount=type=cache,target=/root/.cache/pip \
         py-build-cmake \
         scikit-build \
         scikit-build-core \
+        ffmpeg-python \
         matplotlib \
         mpmath \
         pandas \
         scikit-image \
         scikit-learn \
-        scipy
+        scipy \
+        svglib
 
 # 1. Dry run pip install to get the list of packages
 #    (first run to show logs, then grep the output)

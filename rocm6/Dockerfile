@@ -26,18 +26,7 @@ python312-devel \
 python312-pip \
 python312-wheel \
 python312-setuptools \
-python312-aiohttp \
 python312-dbm \
-python312-ffmpeg-python \
-python312-GitPython \
-python312-httpx \
-python312-joblib \
-python312-lark \
-python312-opencv \
-python312-qrcode \
-python312-rich \
-python312-svglib \
-python312-tqdm \
     && rm /usr/lib64/python3.12/EXTERNALLY-MANAGED \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 100
 
@@ -104,9 +93,12 @@ RUN --mount=type=cache,target=/root/.cache/pip \
         py-build-cmake \
         scikit-build \
         scikit-build-core \
+        ffmpeg-python \
+        httpx \
         matplotlib \
         mpmath \
         pandas \
+        qrcode[pil] \
         scikit-image \
         scikit-learn \
         scipy

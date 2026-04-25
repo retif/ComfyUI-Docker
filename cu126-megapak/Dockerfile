@@ -103,7 +103,6 @@ RUN --mount=type=cache,target=/var/cache/zypp \
     zypper --gpg-auto-import-keys refresh \
     && zypper --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
-python312-opencv \
 opencv \
 opencv-devel \
 Mesa-libGL1 \
@@ -114,53 +113,7 @@ libQt5OpenGL-devel
 RUN --mount=type=cache,target=/var/cache/zypp \
     zypper --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
-python312-addict \
-python312-aenum \
-python312-aiohttp \
-python312-alembic \
-python312-black \
-python312-cachetools \
-python312-chardet \
-python312-dbm \
-python312-deepdiff \
-python312-dill \
-python312-ffmpeg-python \
-python312-filelock \
-python312-ftfy \
-python312-GitPython \
-python312-httpx \
-python312-imageio \
-python312-importlib-metadata \
-python312-joblib \
-python312-lark \
-python312-loguru \
-python312-mss \
-python312-numexpr \
-python312-piexif \
-python312-protobuf \
-python312-py-cpuinfo \
-python312-pydantic \
-python312-pydantic-settings \
-python312-pydub \
-python312-pygit2 \
-python312-PyGithub \
-python312-PyYAML \
-python312-regex \
-python312-qrcode \
-python312-rich \
-python312-safetensors \
-python312-simpleeval \
-python312-SoundFile \
-python312-SQLAlchemy \
-python312-svglib \
-python312-tokenizers \
-python312-toml \
-python312-tqdm \
-python312-typer \
-python312-uv \
-python312-webcolors \
-python312-yapf \
-python312-yarl
+python312-dbm
 
 RUN --mount=type=cache,target=/var/cache/zypp \
     zypper --gpg-auto-import-keys \
@@ -233,12 +186,15 @@ RUN --mount=type=cache,target=/root/.cache/pip \
         py-build-cmake \
         scikit-build \
         scikit-build-core \
+        ffmpeg-python \
+        httpx \
         matplotlib \
         mpmath \
         pandas \
         scikit-image \
         scikit-learn \
-        scipy
+        scipy \
+        svglib
 
 # Here's some hack. To reduce image size & single layer size, we:
 # 1. Install PyTorch and all its dependencies.
