@@ -98,6 +98,20 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     && pip install \
         --upgrade pip wheel setuptools
 
+# Build tools and Python packages no longer available as zypper packages
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install \
+        Cython \
+        py-build-cmake \
+        scikit-build \
+        scikit-build-core \
+        matplotlib \
+        mpmath \
+        pandas \
+        scikit-image \
+        scikit-learn \
+        scipy
+
 # PyTorch ROCm
 # Ref: https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/native_linux/install-pytorch.html
 # Ref: https://rocm.docs.amd.com/projects/radeon-ryzen/en/latest/docs/install/installrad/native_linux/install-onnx.html

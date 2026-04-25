@@ -225,6 +225,20 @@ RUN --mount=type=cache,target=/root/.cache/pip \
         --dry-run xformers==0.0.34 torchvision torchaudio \
         --index-url https://download.pytorch.org/whl/cu128
 
+# Build tools and Python packages no longer available as zypper packages
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install \
+        Cython \
+        py-build-cmake \
+        scikit-build \
+        scikit-build-core \
+        matplotlib \
+        mpmath \
+        pandas \
+        scikit-image \
+        scikit-learn \
+        scipy
+
 # Here's some hack. To reduce image size & single layer size, we:
 # 1. Install PyTorch and all its dependencies.
 # 2. Uninstall PyTorch only,
