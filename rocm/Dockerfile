@@ -21,6 +21,7 @@ RUN --mount=type=cache,target=/var/cache/zypp \
         'https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/Essentials/' packman-essentials \
     && zypper addrepo --check --refresh --priority 80 \
         'https://download.opensuse.org/repositories/science:/GPU:/ROCm/openSUSE_Tumbleweed/science:GPU:ROCm.repo' \
+    && zypper --gpg-auto-import-keys refresh \
     && zypper --gpg-auto-import-keys \
         install --no-confirm --auto-agree-with-licenses \
 python312-devel \
