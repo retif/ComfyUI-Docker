@@ -127,7 +127,8 @@ vim \
 which \
 ffmpeg \
 x264 \
-x265
+x265 \
+update-alternatives
 
 RUN --mount=type=cache,target=/var/cache/zypp \
     zypper --non-interactive \

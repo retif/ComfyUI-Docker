@@ -151,7 +151,8 @@ vim \
 which \
 ffmpeg \
 x264 \
-x265
+x265 \
+update-alternatives
 
 # Remove PEP 668 restriction (safe in containers)
 RUN rm -vf /usr/lib64/python3.13/EXTERNALLY-MANAGED \

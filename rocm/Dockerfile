@@ -29,6 +29,7 @@ python312-pip \
 python312-wheel \
 python312-setuptools \
 python312-dbm \
+update-alternatives \
     && rm /usr/lib64/python3.12/EXTERNALLY-MANAGED \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 100
 

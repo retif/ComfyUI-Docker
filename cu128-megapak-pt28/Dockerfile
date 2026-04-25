@@ -128,7 +128,8 @@ vim \
 which \
 ffmpeg \
 x264 \
-x265
+x265 \
+update-alternatives
 
 RUN rm -vf /usr/lib64/python3.12/EXTERNALLY-MANAGED \
     # Ensure default Python version

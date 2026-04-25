@@ -230,6 +230,7 @@ RUN --mount=type=cache,target=/var/cache/zypp \
 gcc15 \
 gcc15-c++ \
 cpp15 \
+update-alternatives \
     && update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++-15 90 \
     && update-alternatives --install /usr/bin/cc cc /usr/bin/gcc-15 90 \
     && update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-15 90 \
