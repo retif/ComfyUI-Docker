@@ -40,6 +40,13 @@ jobs:
           git fetch --depth 1 origin "${{ github.sha }}"
           git checkout FETCH_HEAD
 
+      - name: Configure Gitea credentials
+        env:
+          GITEA_TOKEN: ${{ secrets.GITEA_REGISTRY_TOKEN }}
+        run: |
+          echo "machine git.oleks.space login oleks password ${GITEA_TOKEN}" > /root/.netrc
+          chmod 600 /root/.netrc
+
       - name: Show toolchain
         run: |
           echo "Nix:    $(nix --version)"
