@@ -13,112 +13,54 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest  # Full VM with loop devices for disk optimization
-    timeout-minutes: 360  # Maximum timeout (6 hours) - large Nix builds need time
+    runs-on: ubuntu-latest
+    timeout-minutes: 360  # Large Nix builds need time
     permissions:
       contents: read
       packages: write
+
+    # Run inside our own nix-ci image — Nix is preconfigured against the
+    # Attic mirror at nix-cache-mirror.oleks.space (see /etc/nix/nix.conf
+    # baked into the image), so we skip cachix/install-nix-action,
+    # cache-nix-action, free-disk-space, and nothing-but-nix.
+    container:
+      image: git.oleks.space/oleks/nix-ci:latest
+      credentials:
+        username: ${{ secrets.GITEA_REGISTRY_USERNAME }}
+        password: ${{ secrets.GITEA_REGISTRY_TOKEN }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ✅ Free up disk space before build (recommended by cache-nix-action)
-      - name: Free Disk Space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: false  # Keep swap for large builds
+      - name: Show toolchain
+        run: |
+          echo "Nix:    $(nix --version)"
+          echo "Node:   $(node --version)"
+          echo "Git:    $(git --version)"
 
-      # ✅ Nix-specific optimization - must run BEFORE Install Nix
-      # Creates optimized btrfs volume on /nix using /mnt space
-      - name: Nothing but Nix
-        uses: wimpysworld/nothing-but-nix@main
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v27
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-            accept-flake-config = true
-            keep-outputs = true
-            keep-derivations = true
-
-      # ✅ Use cache-nix-action for better Nix caching
-      - name: Restore and cache Nix store
-        uses: nix-community/cache-nix-action@v6
-        with:
-          primary-key: nix-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock') }}
-          restore-prefixes-first-match: nix-${{ runner.os }}-
-          gc-max-store-size-linux: 8000000000  # 8GB - clean up old paths before saving
-          purge: true
-          purge-prefixes: nix-${{ runner.os }}-
-          purge-last-accessed: 604800  # 7 days
-
-      # ✅ Show what will be built for better visibility
       - name: Show flake outputs
         working-directory: cu130-megapak-pt210-py314-nix
-        run: |
-          echo "📦 Available flake outputs:"
-          nix flake show
-
-      - name: Check disk space before build
-        run: |
-          echo "💾 Disk space before build:"
-          df -h /
+        run: nix flake show --no-write-lock-file
 
       - name: Evaluate build plan
         working-directory: cu130-megapak-pt210-py314-nix
         run: |
-          echo "📋 Evaluating build plan..."
           nix eval .#comfyui.imageName
           nix eval .#comfyui.imageTag
-
-      - name: Show build dependencies
-        working-directory: cu130-megapak-pt210-py314-nix
-        run: |
-          echo "📦 Checking what needs to be built..."
-          nix path-info .#comfyui --derivation
-
-      - name: Show derivation details
-        working-directory: cu130-megapak-pt210-py314-nix
-        run: |
-          echo "🔍 Derivation structure:"
-          nix show-derivation .#comfyui | jq -r 'to_entries | .[0] | .value | {name: .outputs, builder: .builder, args: .args[:5]}' || nix show-derivation .#comfyui | head -50
 
       - name: Build ComfyUI image
         working-directory: cu130-megapak-pt210-py314-nix
         run: |
-          echo "🔨 Building ComfyUI image with nix2container..."
-          echo "⏰ Build started at: $(date)"
+          echo "Build started at: $(date -u +%FT%TZ)"
           nix build .#comfyui --print-build-logs
-          echo "✅ Build completed at: $(date)"
+          echo "Build completed at: $(date -u +%FT%TZ)"
 
       - name: Verify build result
         working-directory: cu130-megapak-pt210-py314-nix
         run: |
-          echo "✅ Build completed, checking result:"
           ls -lh result
           du -sh result
-
-      - name: Check disk space after build
-        run: |
-          echo "💾 Disk space after build:"
-          df -h /
-
-      # ✅ Registry-level caching happens here automatically
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push to GHCR
         working-directory: cu130-megapak-pt210-py314-nix
@@ -127,50 +69,24 @@ jobs:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
         run: |
-          # nix2container.copyToRegistry with Skopeo
-          # Automatically skips unchanged layers!
+          # nix2container.copyToRegistry uses skopeo internally and skips
+          # unchanged layers automatically (registry-side dedup).
           nix run .#comfyui.copyToRegistry -- \
             --dest-creds "$GITHUB_ACTOR:$GITHUB_TOKEN" \
             ghcr.io/$GITHUB_REPOSITORY_OWNER/comfyui-nix2container:cu130-megapak-py314
 
-          echo "Image pushed with automatic layer deduplication!"
-
-      - name: Push with cache info
+      - name: Summary
         working-directory: cu130-megapak-pt210-py314-nix
         run: |
-          echo "## Image Information" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Registry:** ghcr.io/${{ github.repository_owner }}/comfyui-nix2container" >> $GITHUB_STEP_SUMMARY
-          echo "**Tag:** cu130-megapak-py314" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Caching Strategy" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Nix store cached via GitHub Actions (10 GB limit)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ OCI layers automatically deduplicated at registry" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Unchanged layers not re-uploaded" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Cache key: \`nix-${{ runner.os }}-${{ hashFiles('cu130-megapak-pt210-py314-nix/flake.lock') }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Automatic garbage collection (max 8GB store)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Cache purge: 7 days" >> $GITHUB_STEP_SUMMARY
-
-  # Optional: Build stats and comparison
-  cache-stats:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    if: always()
-    steps:
-      - name: Cache Statistics
-        run: |
-          echo "## Build Cache Performance" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Caching Strategy (cache-nix-action)" >> $GITHUB_STEP_SUMMARY
-          echo "1. **Nix Store Cache** - cache-nix-action with GC (8GB limit)" >> $GITHUB_STEP_SUMMARY
-          echo "2. **GHCR Registry** - OCI layer deduplication (automatic)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Benefits" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Automatic garbage collection before cache save" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Old cache purging (7 day retention)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Registry automatically deduplicates OCI layers by digest" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Optimized for large Nix builds" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Notes" >> $GITHUB_STEP_SUMMARY
-          echo "- GC keeps store under 8GB before saving" >> $GITHUB_STEP_SUMMARY
-          echo "- Monitor: repo Settings → Actions → Caches" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Image"
+            echo ""
+            echo "**Registry:** ghcr.io/${{ github.repository_owner }}/comfyui-nix2container"
+            echo "**Tag:** cu130-megapak-py314"
+            echo ""
+            echo "## Caching"
+            echo ""
+            echo "- Nix store substituted from \`nix-cache-mirror.oleks.space\` (Attic)"
+            echo "- Image runner: \`git.oleks.space/oleks/nix-ci:latest\` (preconfigured)"
+            echo "- OCI layers deduplicated at registry — only changed layers re-uploaded"
+          } >> $GITHUB_STEP_SUMMARY
