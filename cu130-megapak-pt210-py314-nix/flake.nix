@@ -73,8 +73,12 @@
             assert builtins.isList priorLayers;
             assert builtins.isAttrs component;
             let
+              # reproducible = false materializes each layer tar into the store, so the
+              # image streams verbatim from any host (remote-builder + binary-cache safe)
+              # and avoids cross-host "Digest did not match" on non-reproducible deps.
               layer = nix2containerPkgs.nix2container.buildLayer (component // {
                 layers = priorLayers;
+                reproducible = false;
               });
             in
             priorLayers ++ [ layer ];
