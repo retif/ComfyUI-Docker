@@ -9,17 +9,26 @@
     nix2container.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils, nix2container, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      nixpkgs,
+      flake-utils,
+      nix2container,
+      ...
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = import nixpkgs {
           inherit system;
           config = {
             allowUnfree = true;
             cudaSupport = true;
-            # Enable ccache for all C/C++ builds to preserve incremental build progress
-            # This will cache compiled objects across interrupted builds
-            replaceStdenv = { pkgs }: pkgs.ccacheStdenv;
+            # NOTE: do NOT set replaceStdenv = ccacheStdenv here. A custom stdenv
+            # rewrites the hash of every C/C++ derivation, so nothing matches the
+            # upstream/fleet binary cache and the entire CUDA closure rebuilds from
+            # source. ccache only helps a single interrupted LOCAL build; for cached
+            # CI it is strictly net-negative.
           };
         };
 
@@ -34,28 +43,28 @@
         pak3Packages = pkgs.callPackage ./pak3.nix {
           inherit python;
           pythonPackages = python.pkgs;
-          buildPythonPackage = python.pkgs.buildPythonPackage;
-          fetchurl = pkgs.fetchurl;
+          inherit (python.pkgs) buildPythonPackage;
+          inherit (pkgs) fetchurl;
         };
 
         pak5Packages = pkgs.callPackage ./pak5.nix {
           inherit python;
           pythonPackages = python.pkgs;
-          buildPythonPackage = python.pkgs.buildPythonPackage;
+          inherit (python.pkgs) buildPythonPackage;
         };
 
         pak7Packages = pkgs.callPackage ./pak7.nix {
           inherit python;
           pythonPackages = python.pkgs;
-          buildPythonPackage = python.pkgs.buildPythonPackage;
-          fetchFromGitHub = pkgs.fetchFromGitHub;
+          inherit (python.pkgs) buildPythonPackage;
+          inherit (pkgs) fetchFromGitHub;
         };
 
         customPackages = pkgs.callPackage ./custom-packages.nix {
           inherit python cudaPackages;
           pythonPackages = python.pkgs;
-          buildPythonPackage = python.pkgs.buildPythonPackage;
-          fetchurl = pkgs.fetchurl;
+          inherit (python.pkgs) buildPythonPackage;
+          inherit (pkgs) fetchurl;
         };
 
         # Import package list helper
@@ -68,22 +77,27 @@
 
         # Helper function to chain layers and avoid duplication
         # Based on: https://blog.eigenvalue.net/2023-nix2container-everything-once/
-        foldImageLayers = let
-          mergeToLayer = priorLayers: component:
-            assert builtins.isList priorLayers;
-            assert builtins.isAttrs component;
-            let
-              # reproducible = false materializes each layer tar into the store, so the
-              # image streams verbatim from any host (remote-builder + binary-cache safe)
-              # and avoids cross-host "Digest did not match" on non-reproducible deps.
-              layer = nix2containerPkgs.nix2container.buildLayer (component // {
-                layers = priorLayers;
-                reproducible = false;
-              });
-            in
-            priorLayers ++ [ layer ];
-        in
-        layers: builtins.foldl' mergeToLayer [] layers;
+        foldImageLayers =
+          let
+            mergeToLayer =
+              priorLayers: component:
+              assert builtins.isList priorLayers;
+              assert builtins.isAttrs component;
+              let
+                # reproducible = false materializes each layer tar into the store, so the
+                # image streams verbatim from any host (remote-builder + binary-cache safe)
+                # and avoids cross-host "Digest did not match" on non-reproducible deps.
+                layer = nix2containerPkgs.nix2container.buildLayer (
+                  component
+                  // {
+                    layers = priorLayers;
+                    reproducible = false;
+                  }
+                );
+              in
+              priorLayers ++ [ layer ];
+          in
+          layers: builtins.foldl' mergeToLayer [ ] layers;
 
         # Layer definitions (explicit, logical grouping)
         layerDefs = [
@@ -152,7 +166,11 @@
           {
             deps = with python.pkgs; [
               # Build tools
-              pip setuptools wheel packaging build
+              pip
+              setuptools
+              wheel
+              packaging
+              build
 
               # Core ML frameworks (custom packages)
               pak3Packages.accelerate
@@ -163,7 +181,15 @@
               transformers
 
               # Scientific computing
-              numpy scipy pillow imageio scikit-learn scikit-image matplotlib pandas seaborn
+              numpy
+              scipy
+              pillow
+              imageio
+              scikit-learn
+              scikit-image
+              matplotlib
+              pandas
+              seaborn
 
               # Computer vision
               # opencv4 from nixpkgs removed (CUDA 12.8 conflicts)
@@ -179,10 +205,17 @@
               pak3Packages.lark
 
               # Data formats
-              pyyaml omegaconf onnx onnxruntime
+              pyyaml
+              omegaconf
+              onnx
+              onnxruntime
 
               # System utilities
-              joblib psutil tqdm regex einops
+              joblib
+              psutil
+              tqdm
+              regex
+              einops
               pak3Packages.nvidia-ml-py
               pak3Packages.ftfy
             ];
@@ -202,22 +235,38 @@
               pak5Packages.spandrel
 
               # HTTP/networking
-              aiohttp requests urllib3
+              aiohttp
+              requests
+              urllib3
 
               # Data processing
-              albumentations av numba numexpr
+              albumentations
+              av
+              numba
+              numexpr
 
               # ML/AI tools
-              peft safetensors sentencepiece tokenizers
+              peft
+              safetensors
+              sentencepiece
+              tokenizers
 
               # Utilities
-              protobuf pydantic rich sqlalchemy
+              protobuf
+              pydantic
+              rich
+              sqlalchemy
 
               # Geometry
-              shapely trimesh
+              shapely
+              trimesh
 
               # Additional
-              webcolors qrcode yarl tomli pycocotools
+              webcolors
+              qrcode
+              yarl
+              tomli
+              pycocotools
             ];
           }
 
@@ -262,14 +311,14 @@
         imageLayers = foldImageLayers layerDefs;
 
         # Application scripts to copy to root
-        builderScripts = pkgs.runCommand "builder-scripts" {} ''
+        builderScripts = pkgs.runCommand "builder-scripts" { } ''
           mkdir -p $out/builder-scripts
           echo "#!/bin/bash" > $out/builder-scripts/placeholder.sh
           echo "echo 'Builder scripts placeholder'" >> $out/builder-scripts/placeholder.sh
           chmod +x $out/builder-scripts/placeholder.sh
         '';
 
-        runnerScripts = pkgs.runCommand "runner-scripts" {} ''
+        runnerScripts = pkgs.runCommand "runner-scripts" { } ''
           mkdir -p $out/runner-scripts
           cat > $out/runner-scripts/entrypoint.sh << 'EOF'
           #!/bin/bash
@@ -301,14 +350,17 @@
 
           # Image configuration
           config = {
-            Cmd = [ "${pkgs.bash}/bin/bash" "/runner-scripts/entrypoint.sh" ];
+            Cmd = [
+              "${pkgs.bash}/bin/bash"
+              "/runner-scripts/entrypoint.sh"
+            ];
             WorkingDir = "/root";
             ExposedPorts = {
-              "8188/tcp" = {};
+              "8188/tcp" = { };
             };
             Env = [
               "PATH=/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-              "PYTHONPATH=${python.withPackages (ps: packageList.all)}/lib/python3.14/site-packages"
+              "PYTHONPATH=${python.withPackages (_: packageList.all)}/lib/python3.14/site-packages"
               "CUDA_HOME=${cudaPackages.cudatoolkit}"
               "LD_LIBRARY_PATH=${cudaPackages.cudatoolkit}/lib:${cudaPackages.cudnn}/lib"
               "CC=${pkgs.gcc15}/bin/gcc"
@@ -318,14 +370,15 @@
           };
         };
 
-      in {
+      in
+      {
         packages = {
           # Main image
           comfyui = comfyuiImage;
           default = comfyuiImage;
 
           # Expose Python environment for debugging
-          pythonWithAllPackages = python.withPackages (ps: packageList.all);
+          pythonWithAllPackages = python.withPackages (_: packageList.all);
         };
 
         # Apps for building and testing
@@ -333,69 +386,77 @@
           # Build and load image
           build = {
             type = "app";
-            program = toString (pkgs.writeScript "build-nix2container" ''
-              #!${pkgs.bash}/bin/bash
-              set -e
+            program = toString (
+              pkgs.writeScript "build-nix2container" ''
+                #!${pkgs.bash}/bin/bash
+                set -e
 
-              echo "Building ComfyUI image with nix2container..."
-              nix build .#comfyui --show-trace
+                echo "Building ComfyUI image with nix2container..."
+                nix build .#comfyui --show-trace
 
-              echo ""
-              echo "Loading image into Docker..."
-              ./result | docker load
+                echo ""
+                echo "Loading image into Docker..."
+                ./result | docker load
 
-              echo ""
-              echo "Done! Image: comfyui-boot:cu130-megapak-py314-nix-nix2container"
-              echo ""
-              echo "Verify packages:"
-              docker run --rm comfyui-boot:cu130-megapak-py314-nix-nix2container \
-                python -c "import torch; print(f'PyTorch {torch.__version__} CUDA {torch.version.cuda}')"
-            '');
+                echo ""
+                echo "Done! Image: comfyui-boot:cu130-megapak-py314-nix-nix2container"
+                echo ""
+                echo "Verify packages:"
+                docker run --rm comfyui-boot:cu130-megapak-py314-nix-nix2container \
+                  python -c "import torch; print(f'PyTorch {torch.__version__} CUDA {torch.version.cuda}')"
+              ''
+            );
           };
 
           # Copy to registry (Skopeo-based, fast!)
           push-ghcr = {
             type = "app";
-            program = toString (pkgs.writeScript "push-ghcr" ''
-              #!${pkgs.bash}/bin/bash
-              set -e
+            program = toString (
+              pkgs.writeScript "push-ghcr" ''
+                #!${pkgs.bash}/bin/bash
+                set -e
 
-              REGISTRY="ghcr.io/$GITHUB_REPOSITORY_OWNER"
-              IMAGE_NAME="comfyui-nix2container"
-              TAG="cu130-megapak-py314"
+                REGISTRY="ghcr.io/$GITHUB_REPOSITORY_OWNER"
+                IMAGE_NAME="comfyui-nix2container"
+                TAG="cu130-megapak-py314"
 
-              echo "Building and pushing to $REGISTRY/$IMAGE_NAME:$TAG"
+                echo "Building and pushing to $REGISTRY/$IMAGE_NAME:$TAG"
 
-              # nix2container supports direct push without docker daemon
-              nix run .#comfyui.copyToRegistry -- \
-                --dest-creds "$GITHUB_ACTOR:$GITHUB_TOKEN" \
-                $REGISTRY/$IMAGE_NAME:$TAG
+                # nix2container supports direct push without docker daemon
+                nix run .#comfyui.copyToRegistry -- \
+                  --dest-creds "$GITHUB_ACTOR:$GITHUB_TOKEN" \
+                  $REGISTRY/$IMAGE_NAME:$TAG
 
-              echo "Pushed to $REGISTRY/$IMAGE_NAME:$TAG"
-            '');
+                echo "Pushed to $REGISTRY/$IMAGE_NAME:$TAG"
+              ''
+            );
           };
 
           # Verify Python environment
           check-packages = {
             type = "app";
-            program = toString (pkgs.writeScript "check-packages" ''
-              #!${pkgs.bash}/bin/bash
-              echo "Python environment packages:"
-              ${python.withPackages (ps: packageList.all)}/bin/python -c "import sys; print('\\n'.join(sorted(sys.path)))"
-              echo ""
-              echo "Installed packages:"
-              ${python.withPackages (ps: packageList.all)}/bin/python -m pip list
-            '');
+            program = toString (
+              pkgs.writeScript "check-packages" ''
+                #!${pkgs.bash}/bin/bash
+                echo "Python environment packages:"
+                ${
+                  python.withPackages (_: packageList.all)
+                }/bin/python -c "import sys; print('\\n'.join(sorted(sys.path)))"
+                echo ""
+                echo "Installed packages:"
+                ${python.withPackages (_: packageList.all)}/bin/python -m pip list
+              ''
+            );
           };
         };
 
         # Development shell
         devShells.default = pkgs.mkShell {
           buildInputs = [
-            (python.withPackages (ps: packageList.all))
+            (python.withPackages (_: packageList.all))
             pkgs.nix-prefetch-git
             pkgs.nix-prefetch-scripts
-            pkgs.skopeo  # For registry operations
+            pkgs.skopeo # For registry operations
           ];
 
           shellHook = ''
